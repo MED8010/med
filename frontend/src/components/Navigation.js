@@ -24,6 +24,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/employes', icon: '👥', label: 'Employés' },
         { path: '/pointages', icon: '✅', label: 'Pointages' },
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
       ]
@@ -55,6 +56,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/employes', icon: '👥', label: 'Employés' },
         { path: '/pointages', icon: '✅', label: 'Pointages' },
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
       ]

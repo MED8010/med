@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import apiClient from '../services/api';
 import '../styles/Dashboard.css';
 
@@ -79,6 +81,91 @@ const SalairesPage = () => {
     } finally {
       setCalculating(false);
     }
+  };
+
+  const exportToPDF = (salaire) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(99, 102, 241); // Primary color
+    doc.text('RH Application', 15, 20);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text('123 Rue de l\'Entreprise, 75000 Paris, France', 15, 28);
+
+    doc.setFontSize(18);
+    doc.setTextColor(30, 27, 75); // Dark blue
+    doc.text('BULLETIN DE PAIE', pageWidth - 15, 20, { align: 'right' });
+
+    doc.setFontSize(10);
+    doc.text(`Période : ${MOIS_LABELS[salaire.mois - 1]} ${salaire.annee}`, pageWidth - 15, 28, { align: 'right' });
+    doc.text(`Date d'édition : ${new Date().toLocaleDateString()}`, pageWidth - 15, 34, { align: 'right' });
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, 40, pageWidth - 15, 40);
+
+    // Info Boxes
+    doc.setFontSize(12);
+    doc.text('Employeur', 15, 50);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text('RH Solutions S.A.', 15, 56);
+    doc.setFont("helvetica", "normal");
+    doc.text('Siret : 123 456 789 00012', 15, 62);
+    doc.text('Code APE : 6201Z', 15, 68);
+
+    doc.setFontSize(12);
+    doc.text('Salarié', pageWidth / 2, 50);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${salaire.employe.prenom} ${salaire.employe.nom}`, pageWidth / 2, 56);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Matricule : ${salaire.employe.matricule}`, pageWidth / 2, 62);
+    doc.text(`Poste : ${salaire.employe.poste || 'Employé'}`, pageWidth / 2, 68);
+    doc.text(`Service : ${salaire.employe.service?.nom_service || 'N/A'}`, pageWidth / 2, 74);
+
+    // Table
+    const tableData = [
+      ['Salaire de base', `${salaire.heures_normales} h`, salaire.prix_heure.toFixed(2), (salaire.heures_normales * salaire.prix_heure).toFixed(2), ''],
+      ['Heures supplémentaires (150%)', `${salaire.heures_supp} h`, (salaire.prix_heure * 1.5).toFixed(2), (salaire.heures_supp * salaire.prix_heure * 1.5).toFixed(2), ''],
+      ['Primes exceptionnelles', '1', salaire.primes_total.toFixed(2), salaire.primes_total.toFixed(2), ''],
+      ['Absences', `${salaire.absences || 0} jours`, '—', '', (salaire.absences_deductions || 0).toFixed(2)],
+      ['Retards', '—', '—', '', (salaire.retards_deductions || 0).toFixed(2)],
+      [{ content: 'TOTAL', colSpan: 3, styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } },
+      { content: salaire.salaire_brut.toFixed(2), styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } },
+      { content: salaire.deductions.toFixed(2), styles: { fontStyle: 'bold', fillColor: [243, 244, 246] } }]
+    ];
+
+    doc.autoTable({
+      startY: 85,
+      head: [['Désignation', 'Nombre / Base', 'Taux', 'Gain (DT)', 'Retenue (DT)']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [99, 102, 241] },
+    });
+
+    // Net à Payer
+    const finalY = doc.lastAutoTable.finalY || 85;
+    doc.setFillColor(30, 27, 75);
+    doc.roundedRect(pageWidth - 85, finalY + 10, 70, 25, 3, 3, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text('NET À PAYER', pageWidth - 50, finalY + 18, { align: 'center' });
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${salaire.salaire_net.toFixed(2)} DT`, pageWidth - 50, finalY + 28, { align: 'center' });
+
+    // Footer
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text('Signature de l\'employeur', 15, finalY + 50);
+    doc.text('Pour vous aider à faire valoir vos droits, conservez ce bulletin de paie sans limitation de durée.', 15, finalY + 70);
+
+    doc.save(`Bulletin_${salaire.employe.matricule}_${salaire.mois}_${salaire.annee}.pdf`);
   };
 
   const handlePrint = (salaire) => {
@@ -364,9 +451,14 @@ const SalairesPage = () => {
                         </button>
                       )}
                       {s.statut === 'paye' && (
-                        <button className="btn-view" onClick={() => handlePrint(s)} title="Imprimer Bulletin" style={{ padding: '6px 10px' }}>
-                          🖨️
-                        </button>
+                        <>
+                          <button className="btn-view" onClick={() => handlePrint(s)} title="Imprimer Bulletin" style={{ padding: '6px 10px' }}>
+                            🖨️
+                          </button>
+                          <button className="btn-view" onClick={() => exportToPDF(s)} title="Exporter PDF" style={{ padding: '6px 10px', background: 'var(--danger)', color: 'white' }}>
+                            PDF
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>

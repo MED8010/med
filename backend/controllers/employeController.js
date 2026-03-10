@@ -177,6 +177,20 @@ const getEmploye = async (req, res) => {
   }
 };
 
+// Obtenir un employé par matricule
+const getEmployeByMatricule = async (req, res) => {
+  try {
+    const { matricule } = req.params;
+    const employe = await Employe.findOne({ matricule }).populate(['service', 'uap', 'user']);
+    if (!employe) {
+      return res.status(404).json({ message: 'Employé non trouvé avec ce matricule' });
+    }
+    res.json(employe);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur lors de la récupération de l\'employé', error: error.message });
+  }
+};
+
 // Mettre à jour un employé
 const updateEmploye = async (req, res) => {
   try {
@@ -265,4 +279,4 @@ const getEmployeStats = async (req, res) => {
   }
 };
 
-module.exports = { createEmploye, getEmployes, getEmploye, updateEmploye, deleteEmploye, getEmployeStats };
+module.exports = { createEmploye, getEmployes, getEmploye, getEmployeByMatricule, updateEmploye, deleteEmploye, getEmployeStats };
