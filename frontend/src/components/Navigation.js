@@ -10,6 +10,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/super-admin', icon: '🔧', label: 'Gestion Système' },
         { path: '/dashboard', icon: '📊', label: 'Dashboard Admin' },
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
       ]
     },
     {
@@ -41,6 +42,7 @@ const NAV_CONFIG = {
       section: 'Tableaux de Bord',
       items: [
         { path: '/dashboard', icon: '📊', label: 'Dashboard' },
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
       ]
     },
     {
