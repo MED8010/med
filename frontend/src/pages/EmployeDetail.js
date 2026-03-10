@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { QRCodeCanvas } from 'qrcode.react';
 import apiClient from '../services/api';
 import '../styles/Dashboard.css';
 
 const EmployeDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const qrRef = useRef();
     const [employe, setEmploye] = useState(null);
     const [pointages, setPointages] = useState([]);
     const [conges, setConges] = useState([]);
@@ -41,6 +43,17 @@ const EmployeDetail = () => {
     if (!employe) return <div className="error-message">Employé non trouvé.</div>;
 
     const initials = `${employe.prenom[0]}${employe.nom[0]}`.toUpperCase();
+
+    const downloadQRCode = () => {
+        const canvas = qrRef.current.querySelector('canvas');
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement('a');
+        link.href = image;
+        link.download = `QR_${employe.matricule}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     return (
         <div className="dashboard-container">
@@ -123,6 +136,28 @@ const EmployeDetail = () => {
                                 </div>
                             </div>
                         </div>
+                        <div className="section-card">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                                <h3>Badge QR Code</h3>
+                                <button className="btn-secondary" onClick={downloadQRCode} style={{ fontSize: '12px', padding: '5px 10px' }}>
+                                    📥 Télécharger
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '10px' }}>
+                                <div ref={qrRef} style={{ background: 'white', padding: '15px', borderRadius: '10px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                                    <QRCodeCanvas
+                                        value={employe.matricule}
+                                        size={180}
+                                        level={"H"}
+                                        includeMargin={true}
+                                    />
+                                </div>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                                    Scannez ce code pour enregistrer le pointage de <strong>{employe.prenom} {employe.nom}</strong>
+                                </p>
+                            </div>
+                        </div>
+
                         <div className="section-card">
                             <h3>Solde de Congés</h3>
                             <div style={{ marginTop: 15 }}>

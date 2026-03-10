@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import apiClient from '../services/api';
 import '../styles/Dashboard.css';
 
@@ -11,6 +13,43 @@ const PointagesPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => { loadData(); }, []);
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text('Rapport des Pointages', 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Date : ${today}`, 14, 30);
+
+    const tableColumn = ["Employé", "Matricule", "Service", "Type", "Détails"];
+    const tableRows = [];
+
+    retards.forEach(r => {
+      const rowData = [
+        `${r.employe?.prenom} ${r.employe?.nom}`,
+        r.employe?.matricule || '—',
+        r.employe?.service?.nom_service || '—',
+        'Retard',
+        `+${r.retard_minutes} min (Entrée: ${r.heure_entree})`
+      ];
+      tableRows.push(rowData);
+    });
+
+    absences.forEach(a => {
+      const rowData = [
+        `${a.employe?.prenom} ${a.employe?.nom}`,
+        a.employe?.matricule || '—',
+        a.employe?.service?.nom_service || '—',
+        'Absent',
+        a.motif_absence || '—'
+      ];
+      tableRows.push(rowData);
+    });
+
+    doc.autoTable(tableColumn, tableRows, { startY: 40 });
+    doc.save(`Rapport_Pointages_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   const loadData = async () => {
     try {
@@ -48,7 +87,10 @@ const PointagesPage = () => {
           <h1>Suivi des Pointages</h1>
           <p className="page-subtitle">📅 {today}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-secondary" onClick={exportToPDF}>📄 Exporter PDF</button>
+          <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}

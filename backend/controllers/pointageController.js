@@ -22,9 +22,11 @@ const createPointage = async (req, res) => {
         motif_absence
       });
     } else {
-      pointage.heure_sortie = heure_sortie || pointage.heure_sortie;
-      pointage.absence = absence !== undefined ? absence : pointage.absence;
-      pointage.motif_absence = motif_absence || pointage.motif_absence;
+      // If updating, only overwrite if new values are provided
+      if (heure_entree) pointage.heure_entree = heure_entree;
+      if (heure_sortie) pointage.heure_sortie = heure_sortie;
+      if (absence !== undefined) pointage.absence = absence;
+      if (motif_absence) pointage.motif_absence = motif_absence;
     }
 
     // Calculer les retards et heures travaillées
