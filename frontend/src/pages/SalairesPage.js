@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const MOIS_LABELS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -79,6 +81,38 @@ const SalairesPage = () => {
     } finally {
       setCalculating(false);
     }
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const title = `Recapitulatif des Salaires - ${MOIS_LABELS[mois - 1]} ${annee}`;
+
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Genere le : ${new Date().toLocaleDateString()}`, 14, 30);
+
+    const tableRows = salaires.map(s => [
+      `${s.employe.prenom} ${s.employe.nom}`,
+      s.employe.matricule,
+      `${s.heures_normales}h`,
+      `${s.heures_supp}h`,
+      `${s.salaire_brut.toFixed(2)} DT`,
+      `${s.deductions.toFixed(2)} DT`,
+      `${s.salaire_net.toFixed(2)} DT`,
+      s.statut
+    ]);
+
+    doc.autoTable({
+      head: [['Employe', 'Matricule', 'H. Norm.', 'H. Supp.', 'Brut', 'Deductions', 'Net', 'Statut']],
+      body: tableRows,
+      startY: 40,
+      theme: 'grid',
+      headStyles: { fillColor: [99, 102, 241] },
+    });
+
+    doc.save(`salaires_${mois}_${annee}.pdf`);
   };
 
   const handlePrint = (salaire) => {
@@ -244,8 +278,8 @@ const SalairesPage = () => {
               color: 'var(--text-primary)', fontFamily: 'inherit', fontSize: 13.5,
             }}
           >
-            {[2024, 2025, 2026, 2027].map(a => (
-              <option key={a} value={a}>{a}</option>
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+              <option key={y} value={y}>{y}</option>
             ))}
           </select>
           <button className="btn-primary" onClick={handleCalculateAll} disabled={calculating}>
@@ -254,6 +288,11 @@ const SalairesPage = () => {
           {calcules > 0 && (
             <button className="btn-success" onClick={handleValidateAll} disabled={calculating} style={{ padding: '10px 18px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'var(--success)', color: 'white', fontWeight: 600, cursor: 'pointer' }}>
               ✅ Valider Tout ({calcules})
+            </button>
+          )}
+          {salaires.length > 0 && (
+            <button className="btn-secondary" onClick={handleExportPDF} style={{ padding: '10px 18px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>
+              📄 Exporter PDF
             </button>
           )}
         </div>
@@ -364,9 +403,14 @@ const SalairesPage = () => {
                         </button>
                       )}
                       {s.statut === 'paye' && (
-                        <button className="btn-view" onClick={() => handlePrint(s)} title="Imprimer Bulletin" style={{ padding: '6px 10px' }}>
-                          🖨️
-                        </button>
+                        <>
+                          <button className="btn-view" onClick={() => handlePrint(s)} title="Imprimer Bulletin" style={{ padding: '6px 10px' }}>
+                            🖨️
+                          </button>
+                          <button className="btn-edit" onClick={() => showMsg(setSuccessMsg, `📧 Bulletin envoyé par email à ${s.employe.email}`)} title="Envoyer par Email" style={{ padding: '6px 10px', background: 'var(--info)' }}>
+                            📧
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>

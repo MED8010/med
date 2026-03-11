@@ -49,7 +49,7 @@ const AdminCongesPage = () => {
   const handleApprove = async (id) => {
     try {
       await apiClient.put(`/conges/${id}/approve`);
-      showFeedback('✅ Congé approuvé avec succès');
+      showFeedback('✅ Congé approuvé avec succès. 📧 Notification envoyée à l\'employé.');
       loadConges();
     } catch (err) {
       showFeedback('❌ Erreur lors de l\'approbation');
@@ -60,7 +60,7 @@ const AdminCongesPage = () => {
     if (!rejectReason.trim()) return;
     try {
       await apiClient.put(`/conges/${rejectModal}/reject`, { commentaire_rejet: rejectReason });
-      showFeedback('Congé refusé');
+      showFeedback('Congé refusé. 📧 Notification envoyée à l\'employé.');
       setRejectModal(null);
       setRejectReason('');
       loadConges();

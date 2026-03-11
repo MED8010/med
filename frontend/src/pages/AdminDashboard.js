@@ -219,7 +219,9 @@ const AdminDashboard = () => {
           <div className="filter-group">
             <label>Année</label>
             <select name="annee" value={filters.annee} onChange={handleFilterChange}>
-              {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
             </select>
           </div>
         </div>

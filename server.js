@@ -1,6 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./backend/config/database');
 const auditMiddleware = require('./backend/middleware/audit');
 
@@ -20,9 +23,23 @@ connectDB();
 
 const app = express();
 
-// Middlewares
-app.use(cors());
+// Security Middlewares
+app.use(helmet()); // Secure headers
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  credentials: true
+}));
+
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { message: 'Trop de requêtes, veuillez réessayer plus tard.' }
+});
+app.use('/api/', limiter);
+
 app.use(express.json());
+app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(auditMiddleware);
 
 // Routes

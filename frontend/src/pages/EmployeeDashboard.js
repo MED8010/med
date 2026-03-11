@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/api';
+import { QRCodeSVG } from 'qrcode.react';
 import '../styles/Dashboard.css';
 
 const EmployeeDashboard = () => {
@@ -144,6 +145,17 @@ const EmployeeDashboard = () => {
       </div>
 
       {/* Tabs */}
+      {/* QR Code Quick Access */}
+      <div className="section-card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--grad-primary)', color: 'white' }}>
+        <div>
+          <h3 style={{ color: 'white', margin: 0 }}>Ma Carte Digitale</h3>
+          <p style={{ opacity: 0.9, fontSize: 13, margin: '4px 0 0' }}>Scannez ce code pour pointer votre présence</p>
+        </div>
+        <div style={{ background: 'white', padding: 8, borderRadius: 12, display: 'flex' }}>
+          <QRCodeSVG value={user?.employe?.matricule || 'N/A'} size={80} />
+        </div>
+      </div>
+
       <div className="admin-tabs">
         {tabs.map(tab => (
           <button
