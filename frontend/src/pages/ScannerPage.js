@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import apiClient from '../services/api';
 import '../styles/Dashboard.css';
@@ -10,41 +10,7 @@ const ScannerPage = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const scannerRef = useRef(null);
 
-  useEffect(() => {
-    startScanner();
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
-      }
-    };
-  }, []);
-
-  const startScanner = () => {
-    const scanner = new Html5QrcodeScanner('reader', {
-      qrbox: {
-        width: 250,
-        height: 250,
-      },
-      fps: 5,
-    });
-
-    scanner.render(onScanSuccess, onScanError);
-    scannerRef.current = scanner;
-  };
-
-  const onScanSuccess = (result) => {
-    if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
-    }
-    setScanResult(result);
-    loadEmploye(result);
-  };
-
-  const onScanError = (err) => {
-    // console.warn(err);
-  };
-
-  const loadEmploye = async (matricule) => {
+  const loadEmploye = useCallback(async (matricule, restartScannerFn) => {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
@@ -54,11 +20,45 @@ const ScannerPage = () => {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
       // Restart scanner if not found
-      startScanner();
+      if (restartScannerFn) restartScannerFn();
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const startScanner = useCallback((onScanSuccessFn) => {
+    const scanner = new Html5QrcodeScanner('reader', {
+      qrbox: {
+        width: 250,
+        height: 250,
+      },
+      fps: 5,
+    });
+
+    const onScanError = (err) => {
+      // console.warn(err);
+    };
+
+    scanner.render(onScanSuccessFn, onScanError);
+    scannerRef.current = scanner;
+  }, []);
+
+  const onScanSuccess = useCallback((result) => {
+    if (scannerRef.current) {
+        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+    }
+    setScanResult(result);
+    loadEmploye(result, () => startScanner(onScanSuccess));
+  }, [loadEmploye, startScanner]);
+
+  useEffect(() => {
+    startScanner(onScanSuccess);
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
+    };
+  }, [startScanner, onScanSuccess]);
 
   const handlePointage = async (type) => {
     if (!employe) return;
@@ -82,7 +82,7 @@ const ScannerPage = () => {
         setEmploye(null);
         setScanResult(null);
         setMessage({ type: '', text: '' });
-        startScanner();
+        startScanner(onScanSuccess);
       }, 3000);
 
     } catch (err) {
@@ -98,12 +98,12 @@ const ScannerPage = () => {
     setMessage({ type: '', text: '' });
     if (scannerRef.current) {
         scannerRef.current.clear().then(() => {
-            startScanner();
+            startScanner(onScanSuccess);
         }).catch(() => {
-            startScanner();
+            startScanner(onScanSuccess);
         });
     } else {
-        startScanner();
+        startScanner(onScanSuccess);
     }
   };
 
