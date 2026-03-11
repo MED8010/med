@@ -58,47 +58,24 @@ const register = async (req, res) => {
 // Connexion
 const login = async (req, res) => {
   try {
-    console.log('\n=== TENTATIVE CONNEXION ===');
     const { email, password } = req.body;
-
-    console.log('📧 Email reçu:', email);
-    console.log('🔐 Password reçu:', password ? `${password.length} chars` : 'VIDE');
 
     // Normaliser l'email comme dans la BD
     const normalizedEmail = email.toLowerCase().trim();
-    console.log('✅ Email normalisé:', normalizedEmail);
 
-    console.log('🔍 Recherche utilisateur dans la BD...');
     const user = await User.findOne({ email: normalizedEmail }).select('+password').populate('employe');
 
     if (!user) {
-      console.error('❌ Utilisateur NON TROUVÉ avec email:', normalizedEmail);
-
-      // Afficher tous les users pour déboguer
-      const allUsers = await User.find({}, 'email role');
-      console.log('📋 Utilisateurs existants:', allUsers.map(u => `${u.email} (${u.role})`));
-
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
 
-    console.log('✅ Utilisateur trouvé:', user._id);
-    console.log('   Email:', user.email);
-    console.log('   Rôle:', user.role);
-    console.log('   Password hash length:', user.password.length);
-
-    console.log('🔐 Vérification du mot de passe...');
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
-      console.error('❌ Mot de passe INVALIDE');
       return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
     }
 
-    console.log('✅ Mot de passe VALIDE');
-
     const token = generateToken(user);
-    console.log('✅ Token généré');
-    console.log('\n');
 
     res.json({
       message: 'Connexion réussie',

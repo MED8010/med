@@ -65,21 +65,16 @@ const ScannerPage = () => {
 
     setLoading(true);
     try {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      const dateStr = now.toISOString().split('T')[0];
-
       const payload = {
         employe_id: employe._id,
-        date: dateStr,
-        [type === 'entree' ? 'heure_entree' : 'heure_sortie']: timeStr,
+        scanner_action: type, // 'entree' or 'sortie'
         absence: false
       };
 
       await apiClient.post('/pointages', payload);
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom} à ${timeStr}`
+        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
       });
 
       // Reset after success

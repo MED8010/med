@@ -278,8 +278,8 @@ const SalairesPage = () => {
               color: 'var(--text-primary)', fontFamily: 'inherit', fontSize: 13.5,
             }}
           >
-            {[2024, 2025, 2026, 2027].map(a => (
-              <option key={a} value={a}>{a}</option>
+            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+              <option key={y} value={y}>{y}</option>
             ))}
           </select>
           <button className="btn-primary" onClick={handleCalculateAll} disabled={calculating}>

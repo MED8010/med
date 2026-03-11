@@ -5,24 +5,40 @@ const Conge = require('../models/Conge');
 // Créer ou mettre à jour un pointage
 const createPointage = async (req, res) => {
   try {
-    const { employe_id, date, heure_entree, heure_sortie, absence, motif_absence } = req.body;
+    const { employe_id, date, heure_entree, heure_sortie, absence, motif_absence, scanner_action } = req.body;
+
+    const today = new Date();
+    const serverTime = today.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const serverDate = today.toISOString().split('T')[0];
+
+    // If scanner_action is provided, use server time and ignore client time
+    const finalDate = scanner_action ? serverDate : date;
+    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
+    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
 
     let pointage = await Pointage.findOne({
       employe: employe_id,
-      date: new Date(date)
+      date: new Date(finalDate)
     });
 
     if (!pointage) {
       pointage = new Pointage({
         employe: employe_id,
-        date: new Date(date),
-        heure_entree,
-        heure_sortie,
+        date: new Date(finalDate),
+        heure_entree: finalHeureEntree,
+        heure_sortie: finalHeureSortie,
         absence,
         motif_absence
       });
     } else {
-      pointage.heure_sortie = heure_sortie || pointage.heure_sortie;
+      if (scanner_action === 'sortie') {
+        pointage.heure_sortie = serverTime;
+      } else if (scanner_action === 'entree') {
+        pointage.heure_entree = serverTime;
+      } else {
+        pointage.heure_sortie = heure_sortie || pointage.heure_sortie;
+        pointage.heure_entree = heure_entree || pointage.heure_entree;
+      }
       pointage.absence = absence !== undefined ? absence : pointage.absence;
       pointage.motif_absence = motif_absence || pointage.motif_absence;
     }

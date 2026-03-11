@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../services/api';
+import * as XLSX from 'xlsx';
 import '../styles/Dashboard.css';
 
 const STATUT_BADGE = {
@@ -161,6 +162,35 @@ const EmployesPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleExportExcel = () => {
+    const dataToExport = employesFiltres.map(emp => ({
+      Matricule: emp.matricule,
+      Nom: emp.nom,
+      Prénom: emp.prenom,
+      Email: emp.email || '—',
+      Téléphone: emp.telephone || '—',
+      Service: emp.service?.nom_service || '—',
+      UAP: emp.uap?.nom_uap || '—',
+      Adresse: emp.adresse || '—',
+      'Prix/Heure (DT)': emp.prix_heure,
+      Statut: emp.statut,
+      'Date Embauche': new Date(emp.date_embauche).toLocaleDateString('fr-FR')
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Employés");
+
+    // Fix column widths
+    const wscols = [
+      { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 15 },
+      { wch: 20 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 15 }
+    ];
+    worksheet['!cols'] = wscols;
+
+    XLSX.writeFile(workbook, `liste_employes_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   const handleDelete = async (id, nomComplet) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer ${nomComplet}?`)) {
       try {
@@ -204,6 +234,11 @@ const EmployesPage = () => {
           {showForm && editingId && (
             <button className="btn-secondary" onClick={() => { resetForm(); setShowForm(false); }}>
               ✕ Annuler
+            </button>
+          )}
+          {!showForm && employes.length > 0 && (
+            <button className="btn-secondary" onClick={handleExportExcel} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              📊 Exporter Excel
             </button>
           )}
         </div>
