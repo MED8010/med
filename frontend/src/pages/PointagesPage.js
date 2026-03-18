@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const PointagesPage = () => {
@@ -40,6 +42,55 @@ const PointagesPage = () => {
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const title = `Rapport des Pointages - ${new Date().toLocaleDateString()}`;
+
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Généré le : ${new Date().toLocaleString()}`, 14, 30);
+
+    // Retards table
+    doc.text("Retards du Jour", 14, 40);
+    const retardsRows = retards.map(r => [
+      `${r.employe?.prenom} ${r.employe?.nom}`,
+      r.employe?.matricule,
+      r.employe?.service?.nom_service,
+      r.heure_entree,
+      `+${r.retard_minutes} min`
+    ]);
+
+    doc.autoTable({
+      head: [['Employé', 'Matricule', 'Service', 'Entrée', 'Retard']],
+      body: retardsRows,
+      startY: 45,
+      theme: 'grid',
+      headStyles: { fillColor: [245, 158, 11] },
+    });
+
+    // Absences table
+    const finalY = doc.lastAutoTable.finalY || 45;
+    doc.text("Absences du Jour", 14, finalY + 15);
+    const absencesRows = absences.map(a => [
+      `${a.employe?.prenom} ${a.employe?.nom}`,
+      a.employe?.matricule,
+      a.employe?.service?.nom_service,
+      a.motif_absence || 'N/A'
+    ]);
+
+    doc.autoTable({
+      head: [['Employé', 'Matricule', 'Service', 'Motif']],
+      body: absencesRows,
+      startY: finalY + 20,
+      theme: 'grid',
+      headStyles: { fillColor: [239, 68, 68] },
+    });
+
+    doc.save(`pointages_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -48,7 +99,10 @@ const PointagesPage = () => {
           <h1>Suivi des Pointages</h1>
           <p className="page-subtitle">📅 {today}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-secondary" onClick={handleExportPDF}>📄 Exporter PDF</button>
+          <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}

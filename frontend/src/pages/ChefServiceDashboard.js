@@ -40,7 +40,7 @@ const ChefServiceDashboard = () => {
 
   const handleApproveConge = async (congeId) => {
     try {
-      await apiClient.put(`/conges/${congeId}`, { statut: 'approuve' });
+      await apiClient.put(`/conges/${congeId}/approve`);
       setConges(conges.filter(c => c._id !== congeId));
       setError('');
     } catch (error) {
@@ -50,7 +50,7 @@ const ChefServiceDashboard = () => {
 
   const handleRejectConge = async (congeId) => {
     try {
-      await apiClient.put(`/conges/${congeId}`, { statut: 'refuse', motif_refus: motifRefus });
+      await apiClient.put(`/conges/${congeId}/reject`, { motif_refus: motifRefus });
       setConges(conges.filter(c => c._id !== congeId));
       setSelectedConge(null);
       setMotifRefus('');
