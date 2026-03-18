@@ -8,6 +8,7 @@ const ScannerPage = () => {
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const scannerRef = useRef(null);
 
   useEffect(() => {
@@ -49,7 +50,29 @@ const ScannerPage = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const empData = res.data;
+      setEmploye(empData);
+
+      // Auto-detect pointage action
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const pointagesRes = await apiClient.get(`/pointages/employe/${empData._id}`, {
+          params: { startDate: today, endDate: today }
+        });
+
+        const todayPointage = pointagesRes.data.find(p => p.date.startsWith(today));
+
+        if (!todayPointage || !todayPointage.heure_entree) {
+          handlePointage('entree', empData);
+        } else if (!todayPointage.heure_sortie) {
+          handlePointage('sortie', empData);
+        } else {
+          setMessage({ type: 'info', text: 'Pointage déjà complet pour aujourd\'hui' });
+        }
+      } catch (err) {
+        console.error("Auto-pointage error", err);
+      }
+
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
@@ -60,13 +83,14 @@ const ScannerPage = () => {
     }
   };
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const handlePointage = async (type, targetEmploye = null) => {
+    const activeEmp = targetEmploye || employe;
+    if (!activeEmp) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
+        employe_id: activeEmp._id,
         scanner_action: type, // 'entree' or 'sortie'
         absence: false
       };
@@ -74,11 +98,14 @@ const ScannerPage = () => {
       await apiClient.post('/pointages', payload);
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${activeEmp.prenom} ${activeEmp.nom}`
       });
+
+      setShowSuccessOverlay(true);
 
       // Reset after success
       setTimeout(() => {
+        setShowSuccessOverlay(false);
         setEmploye(null);
         setScanResult(null);
         setMessage({ type: '', text: '' });
@@ -109,6 +136,17 @@ const ScannerPage = () => {
 
   return (
     <div className="dashboard-container">
+      {showSuccessOverlay && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(16, 185, 129, 0.9)',
+          zIndex: 9999, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', color: 'white'
+        }}>
+          <div style={{ fontSize: 100, marginBottom: 20 }}>✅</div>
+          <h1 style={{ fontSize: 40 }}>POINTAGE RÉUSSI</h1>
+          <p style={{ fontSize: 24 }}>{message.text}</p>
+        </div>
+      )}
       <div className="page-header">
         <div className="page-title-group">
           <h1>Scanner QR Code</h1>
