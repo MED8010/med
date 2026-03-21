@@ -27,6 +27,7 @@ const NAV_CONFIG = {
         { path: '/pointages', icon: '✅', label: 'Pointages' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
+        { path: '/stages', icon: '📚', label: 'Stages' },
       ]
     },
     {
@@ -59,6 +60,7 @@ const NAV_CONFIG = {
         { path: '/pointages', icon: '✅', label: 'Pointages' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
+        { path: '/stages', icon: '📚', label: 'Stages' },
       ]
     },
     {
@@ -75,6 +77,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
         { path: '/mes-conges', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
@@ -83,8 +86,10 @@ const NAV_CONFIG = {
     {
       section: 'Personnel',
       items: [
+        { path: '/chef-dashboard', icon: '📋', label: 'Chef Dashboard' },
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
         { path: '/mes-conges-chef', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },

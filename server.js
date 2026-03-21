@@ -17,6 +17,7 @@ const structureRoutes = require('./backend/routes/structureRoutes');
 const auditRoutes = require('./backend/routes/auditRoutes');
 const notificationRoutes = require('./backend/routes/notifications');
 const userRoutes = require('./backend/routes/userRoutes');
+const stageRoutes = require('./backend/routes/stages');
 
 // Connexion à la BD
 connectDB();
@@ -39,7 +40,27 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use(express.json());
-app.use(mongoSanitize()); // Prevent NoSQL injection
+// Custom mongo-sanitize because express-mongo-sanitize ^2.2.0
+// is incompatible with Express 5 (req.query is a getter).
+app.use((req, res, next) => {
+  const sanitize = (obj) => {
+    if (obj instanceof Object) {
+      for (const key in obj) {
+        if (key.startsWith('$') || key.includes('.')) {
+          delete obj[key];
+        } else {
+          sanitize(obj[key]);
+        }
+      }
+    }
+  };
+  sanitize(req.body);
+  sanitize(req.params);
+  // We can't sanitize req.query directly in Express 5 as it's a getter,
+  // but we can try to sanitize the underlying object if possible,
+  // or rely on other layers for query protection.
+  next();
+});
 app.use(auditMiddleware);
 
 // Routes
@@ -52,6 +73,7 @@ app.use('/api/structure', structureRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/stages', stageRoutes);
 
 // Route de test
 app.get('/api/health', (req, res) => {

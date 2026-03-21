@@ -49,7 +49,30 @@ const ScannerPage = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const employeData = res.data;
+      setEmploye(employeData);
+
+      // Auto-detection logic
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const pointagesRes = await apiClient.get(`/pointages/employe/${employeData._id}?startDate=${today}&endDate=${today}`);
+        const todayPointage = pointagesRes.data.find(p => p.date.split('T')[0] === today);
+
+        if (!todayPointage) {
+          // No pointage today -> Auto Enter
+          handlePointage('entree', employeData);
+        } else if (todayPointage.heure_entree && !todayPointage.heure_sortie) {
+          // Entry exists but no exit -> Auto Exit
+          handlePointage('sortie', employeData);
+        } else {
+          // Both exist
+          setMessage({ type: 'info', text: `${employeData.prenom} a déjà terminé sa journée.` });
+          setTimeout(handleReset, 4000);
+        }
+      } catch (err) {
+        console.error("Auto-detection failed", err);
+        // Fallback to manual if auto-detection fails
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
@@ -60,13 +83,14 @@ const ScannerPage = () => {
     }
   };
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const handlePointage = async (type, targetEmploye = null) => {
+    const emp = targetEmploye || employe;
+    if (!emp) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
+        employe_id: emp._id,
         scanner_action: type, // 'entree' or 'sortie'
         absence: false
       };
@@ -74,15 +98,12 @@ const ScannerPage = () => {
       await apiClient.post('/pointages', payload);
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${emp.prenom} ${emp.nom}`
       });
 
       // Reset after success
       setTimeout(() => {
-        setEmploye(null);
-        setScanResult(null);
-        setMessage({ type: '', text: '' });
-        startScanner();
+        handleReset();
       }, 3000);
 
     } catch (err) {

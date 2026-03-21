@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const PointagesPage = () => {
@@ -40,6 +42,60 @@ const PointagesPage = () => {
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const dateStr = new Date().toLocaleDateString('fr-FR');
+
+    doc.setFontSize(18);
+    doc.text(`Rapport des Pointages - ${dateStr}`, 14, 22);
+
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Total Retards: ${retards.length} | Total Absences: ${absences.length}`, 14, 30);
+
+    // Retards Table
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Liste des Retards", 14, 45);
+
+    const retardsData = retards.map(r => [
+      `${r.employe?.prenom} ${r.employe?.nom}`,
+      r.employe?.matricule || 'N/A',
+      r.employe?.service?.nom_service || 'N/A',
+      r.heure_entree,
+      `${r.retard_minutes} min`
+    ]);
+
+    doc.autoTable({
+      startY: 50,
+      head: [['Employé', 'Matricule', 'Service', 'Heure Entrée', 'Retard']],
+      body: retardsData,
+      theme: 'grid',
+      headStyles: { fillColor: [244, 162, 97] } // Orange-ish
+    });
+
+    // Absences Table
+    const finalY = doc.lastAutoTable.finalY || 50;
+    doc.text("Liste des Absences", 14, finalY + 15);
+
+    const absencesData = absences.map(a => [
+      `${a.employe?.prenom} ${a.employe?.nom}`,
+      a.employe?.matricule || 'N/A',
+      a.employe?.service?.nom_service || 'N/A',
+      a.motif_absence || 'Non spécifié'
+    ]);
+
+    doc.autoTable({
+      startY: finalY + 20,
+      head: [['Employé', 'Matricule', 'Service', 'Motif']],
+      body: absencesData,
+      theme: 'grid',
+      headStyles: { fillColor: [231, 76, 60] } // Red-ish
+    });
+
+    doc.save(`pointages_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -48,7 +104,10 @@ const PointagesPage = () => {
           <h1>Suivi des Pointages</h1>
           <p className="page-subtitle">📅 {today}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="btn-secondary" onClick={exportPDF}>📄 Exporter PDF</button>
+            <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}

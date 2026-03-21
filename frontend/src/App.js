@@ -24,6 +24,8 @@ import TimeDisciplineDashboard from './pages/TimeDisciplineDashboard';
 import SalaryAnalyticsDashboard from './pages/SalaryAnalyticsDashboard';
 import ProfilePage from './pages/ProfilePage';
 import EmployeDetail from './pages/EmployeDetail';
+import StagePage from './pages/StagePage';
+import ChefServiceDashboard from './pages/ChefServiceDashboard';
 
 import './styles/Dashboard.css';
 
@@ -130,6 +132,18 @@ function App() {
           <Route path="/mes-conges-chef" element={
             <ProtectedRoute allowedRoles={['chef_service']}>
               <AppLayout><CongesChefPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/chef-dashboard" element={
+            <ProtectedRoute allowedRoles={['chef_service']}>
+              <AppLayout><ChefServiceDashboard /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/stages" element={
+            <ProtectedRoute allowedRoles={['employe', 'chef_service', 'admin', 'super_admin']}>
+              <AppLayout><StagePage /></AppLayout>
             </ProtectedRoute>
           } />
 
