@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
+// const mongoSanitize = require('express-mongo-sanitize');
 const connectDB = require('./backend/config/database');
 const auditMiddleware = require('./backend/middleware/audit');
 
@@ -39,7 +39,38 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use(express.json());
-app.use(mongoSanitize()); // Prevent NoSQL injection
+// app.use(mongoSanitize()); // Prevent NoSQL injection
+
+// Simple custom sanitizer for Express 5 compatibility (sanitizes body, params, and query)
+app.use((req, res, next) => {
+  const sanitize = (obj) => {
+    if (obj && typeof obj === 'object') {
+      const sanitizedObj = Array.isArray(obj) ? [] : {};
+      for (const key in obj) {
+        if (!key.startsWith('$')) {
+          sanitizedObj[key] = sanitize(obj[key]);
+        }
+      }
+      return sanitizedObj;
+    }
+    return obj;
+  };
+
+  if (req.body) req.body = sanitize(req.body);
+  if (req.params) req.params = sanitize(req.params);
+  if (req.query) {
+    // In Express 5, req.query is a getter. We need to overwrite it.
+    const sanitizedQuery = sanitize(req.query);
+    Object.defineProperty(req, 'query', {
+      value: sanitizedQuery,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  }
+  next();
+});
+
 app.use(auditMiddleware);
 
 // Routes
