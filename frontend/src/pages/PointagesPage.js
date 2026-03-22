@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const PointagesPage = () => {
@@ -27,6 +29,61 @@ const PointagesPage = () => {
     }
   };
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const todayStr = new Date().toLocaleDateString('fr-FR');
+    const title = `Rapport des Pointages - ${todayStr}`;
+
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Généré le : ${new Date().toLocaleString()}`, 14, 30);
+
+    // Section Retards
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text("Retards du jour", 14, 45);
+
+    const retardRows = retards.map(r => [
+      `${r.employe?.prenom} ${r.employe?.nom}`,
+      r.employe?.matricule || '—',
+      r.employe?.service?.nom_service || '—',
+      r.heure_entree,
+      `+${r.retard_minutes} min`
+    ]);
+
+    doc.autoTable({
+      head: [['Employé', 'Matricule', 'Service', 'Heure Entrée', 'Retard']],
+      body: retardRows.length > 0 ? retardRows : [['Aucun retard signalé', '', '', '', '']],
+      startY: 50,
+      theme: 'grid',
+      headStyles: { fillColor: [245, 158, 11] }, // Warning color
+    });
+
+    // Section Absences
+    const finalY = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.text("Absences du jour", 14, finalY);
+
+    const absenceRows = absences.map(a => [
+      `${a.employe?.prenom} ${a.employe?.nom}`,
+      a.employe?.matricule || '—',
+      a.employe?.service?.nom_service || '—',
+      a.motif_absence || 'Non spécifié'
+    ]);
+
+    doc.autoTable({
+      head: [['Employé', 'Matricule', 'Service', 'Motif']],
+      body: absenceRows.length > 0 ? absenceRows : [['Aucune absence signalée', '', '', '']],
+      startY: finalY + 5,
+      theme: 'grid',
+      headStyles: { fillColor: [239, 68, 68] }, // Danger color
+    });
+
+    doc.save(`pointages_${todayStr.replace(/\//g, '-')}.pdf`);
+  };
+
   if (loading) return <div className="loading"><div className="spinner"></div>Chargement des pointages...</div>;
 
   const totalPresents = retards.length + absences.length;
@@ -48,7 +105,10 @@ const PointagesPage = () => {
           <h1>Suivi des Pointages</h1>
           <p className="page-subtitle">📅 {today}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-secondary" onClick={handleExportPDF}>📄 Exporter PDF</button>
+          <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}

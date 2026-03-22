@@ -49,7 +49,11 @@ const ScannerPage = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const empData = res.data;
+      setEmploye(empData);
+
+      // Auto pointage
+      handleAutoPointage(empData);
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
@@ -57,6 +61,42 @@ const ScannerPage = () => {
       startScanner();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoPointage = async (emp) => {
+    try {
+      const payload = {
+        employe_id: emp._id,
+        scanner_action: 'auto',
+        absence: false
+      };
+
+      const res = await apiClient.post('/pointages', payload);
+      const actionType = res.data.action;
+
+      setMessage({
+        type: 'success',
+        text: `✅ Pointage d'${actionType === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${emp.prenom} ${emp.nom}`
+      });
+
+      // Feedback sonore (optionnel, certains navigateurs bloquent l'auto-play)
+      try {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+        audio.play();
+      } catch (e) {}
+
+      // Reset after success
+      setTimeout(() => {
+        setEmploye(null);
+        setScanResult(null);
+        setMessage({ type: '', text: '' });
+        startScanner();
+      }, 3000);
+
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement automatique' });
+      setTimeout(handleReset, 3000);
     }
   };
 
@@ -165,22 +205,24 @@ const ScannerPage = () => {
                 <span>{employe.poste || 'Collaborateur'}</span>
               </div>
 
+              <div className="badge badge-success" style={{ padding: '15px', width: '100%', fontSize: '1.1rem', marginBottom: '20px' }}>
+                ✅ Pointage Automatique Validé
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
                 <button
-                  className="btn-primary"
-                  style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
+                  className="btn-secondary"
                   onClick={() => handlePointage('entree')}
                   disabled={loading}
                 >
-                  📥 Pointer Entrée
+                  📥 Forcer Entrée
                 </button>
                 <button
-                  className="btn-primary"
-                  style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
+                  className="btn-secondary"
                   onClick={() => handlePointage('sortie')}
                   disabled={loading}
                 >
-                  📤 Pointer Sortie
+                  📤 Forcer Sortie
                 </button>
               </div>
             </div>

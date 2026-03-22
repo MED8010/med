@@ -13,15 +13,23 @@ const createPointage = async (req, res) => {
 
     // If scanner_action is provided, use server time and ignore client time
     const finalDate = scanner_action ? serverDate : date;
-    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
-    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
+    let finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
+    let finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
 
     let pointage = await Pointage.findOne({
       employe: employe_id,
       date: new Date(finalDate)
     });
 
+    let actualAction = scanner_action;
+
     if (!pointage) {
+      // Pour scanner 'auto', si pas de pointage aujourd'hui, c'est une entrée
+      if (scanner_action === 'auto') {
+        finalHeureEntree = serverTime;
+        actualAction = 'entree';
+      }
+
       pointage = new Pointage({
         employe: employe_id,
         date: new Date(finalDate),
@@ -31,10 +39,16 @@ const createPointage = async (req, res) => {
         motif_absence
       });
     } else {
-      if (scanner_action === 'sortie') {
+      if (scanner_action === 'sortie' || (scanner_action === 'auto' && !pointage.heure_sortie)) {
         pointage.heure_sortie = serverTime;
+        actualAction = 'sortie';
       } else if (scanner_action === 'entree') {
         pointage.heure_entree = serverTime;
+        actualAction = 'entree';
+      } else if (scanner_action === 'auto' && pointage.heure_sortie) {
+        // Déjà une entrée et une sortie, on met à jour la sortie (ou on pourrait ignorer)
+        pointage.heure_sortie = serverTime;
+        actualAction = 'sortie';
       } else {
         pointage.heure_sortie = heure_sortie || pointage.heure_sortie;
         pointage.heure_entree = heure_entree || pointage.heure_entree;
@@ -66,7 +80,11 @@ const createPointage = async (req, res) => {
     await pointage.save();
     await pointage.populate('employe');
 
-    res.status(201).json({ message: 'Pointage enregistré avec succès', pointage });
+    res.status(201).json({
+      message: 'Pointage enregistré avec succès',
+      pointage,
+      action: actualAction
+    });
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de l\'enregistrement du pointage', error: error.message });
   }
