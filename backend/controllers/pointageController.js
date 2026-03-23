@@ -13,8 +13,8 @@ const createPointage = async (req, res) => {
 
     // If scanner_action is provided, use server time and ignore client time
     const finalDate = scanner_action ? serverDate : date;
-    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
-    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
+    let finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
+    let finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
 
     let pointage = await Pointage.findOne({
       employe: employe_id,
@@ -22,6 +22,11 @@ const createPointage = async (req, res) => {
     });
 
     if (!pointage) {
+      // For auto mode, if no record exists, it's an entry
+      if (scanner_action === 'auto') {
+        finalHeureEntree = serverTime;
+      }
+
       pointage = new Pointage({
         employe: employe_id,
         date: new Date(finalDate),
@@ -35,6 +40,13 @@ const createPointage = async (req, res) => {
         pointage.heure_sortie = serverTime;
       } else if (scanner_action === 'entree') {
         pointage.heure_entree = serverTime;
+      } else if (scanner_action === 'auto') {
+        // For auto mode, if entry exists but no exit, it's an exit
+        if (pointage.heure_entree && !pointage.heure_sortie) {
+          pointage.heure_sortie = serverTime;
+        } else if (!pointage.heure_entree) {
+          pointage.heure_entree = serverTime;
+        }
       } else {
         pointage.heure_sortie = heure_sortie || pointage.heure_sortie;
         pointage.heure_entree = heure_entree || pointage.heure_entree;
