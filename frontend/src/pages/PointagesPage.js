@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const PointagesPage = () => {
@@ -40,6 +42,44 @@ const PointagesPage = () => {
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const isRetards = activeTab === 'retards';
+    const title = isRetards ? `Rapport des Retards - ${today}` : `Rapport des Absences - ${today}`;
+
+    doc.setFontSize(18);
+    doc.text(title, 14, 22);
+
+    const tableColumn = isRetards
+      ? ["Employé", "Matricule", "Service", "Heure d'Entrée", "Retard"]
+      : ["Employé", "Matricule", "Service", "Motif"];
+
+    const tableRows = (isRetards ? filteredRetards : filteredAbsences).map(item => {
+      const rowData = [
+        `${item.employe?.prenom} ${item.employe?.nom}`,
+        item.employe?.matricule || '—',
+        item.employe?.service?.nom_service || '—',
+      ];
+      if (isRetards) {
+        rowData.push(item.heure_entree, `+${item.retard_minutes} min`);
+      } else {
+        rowData.push(item.motif_absence || '—');
+      }
+      return rowData;
+    });
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 3 },
+      headStyles: { fillColor: isRetards ? [245, 158, 11] : [239, 68, 68] },
+    });
+
+    doc.save(`Rapport_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -48,7 +88,10 @@ const PointagesPage = () => {
           <h1>Suivi des Pointages</h1>
           <p className="page-subtitle">📅 {today}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-secondary" onClick={exportToPDF}>📄 Exporter PDF</button>
+          <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}

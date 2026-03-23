@@ -7,6 +7,7 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const scannerRef = useRef(null);
 
@@ -49,7 +50,12 @@ const ScannerPage = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const empData = res.data;
+      setEmploye(empData);
+
+      if (isAutoMode) {
+        handlePointage('auto', empData);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
@@ -60,21 +66,32 @@ const ScannerPage = () => {
     }
   };
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const handlePointage = async (type, emp = null) => {
+    const targetEmploye = emp || employe;
+    if (!targetEmploye) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
-        scanner_action: type, // 'entree' or 'sortie'
+        employe_id: targetEmploye._id,
+        scanner_action: type, // 'entree', 'sortie' or 'auto'
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const res = await apiClient.post('/pointages', payload);
+      const pointage = res.data.pointage;
+
+      let typeLabel = '';
+      if (type === 'entree') typeLabel = 'd\'entrée';
+      else if (type === 'sortie') typeLabel = 'de sortie';
+      else {
+          // If auto, determine what was actually recorded
+          typeLabel = pointage.heure_sortie ? 'de sortie' : 'd\'entrée';
+      }
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage ${typeLabel} enregistré pour ${targetEmploye.prenom} ${targetEmploye.nom}`
       });
 
       // Reset after success
@@ -118,7 +135,21 @@ const ScannerPage = () => {
 
       <div className="grid-2">
         <div className="section-card">
-          <h3>📷 Scanner</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h3 style={{ margin: 0 }}>📷 Scanner</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label className="switch-label" style={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                {isAutoMode ? '⚡ Mode Automatique Actif' : '✋ Mode Manuel'}
+              </label>
+              <button
+                className={`btn-${isAutoMode ? 'success' : 'secondary'}`}
+                style={{ padding: '4px 12px', fontSize: '0.75rem' }}
+                onClick={() => setIsAutoMode(!isAutoMode)}
+              >
+                {isAutoMode ? 'Désactiver Auto' : 'Activer Auto'}
+              </button>
+            </div>
+          </div>
           <div id="reader" style={{ width: '100%' }}></div>
           {scanResult && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
