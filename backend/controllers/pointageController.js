@@ -13,13 +13,20 @@ const createPointage = async (req, res) => {
 
     // If scanner_action is provided, use server time and ignore client time
     const finalDate = scanner_action ? serverDate : date;
-    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
-    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
 
     let pointage = await Pointage.findOne({
       employe: employe_id,
       date: new Date(finalDate)
     });
+
+    // Auto-detect entry or exit if scanner_action is 'auto'
+    let effectiveAction = scanner_action;
+    if (scanner_action === 'auto') {
+      effectiveAction = (!pointage || !pointage.heure_entree) ? 'entree' : 'sortie';
+    }
+
+    const finalHeureEntree = (effectiveAction === 'entree') ? serverTime : heure_entree;
+    const finalHeureSortie = (effectiveAction === 'sortie') ? serverTime : heure_sortie;
 
     if (!pointage) {
       pointage = new Pointage({
@@ -27,20 +34,22 @@ const createPointage = async (req, res) => {
         date: new Date(finalDate),
         heure_entree: finalHeureEntree,
         heure_sortie: finalHeureSortie,
-        absence,
-        motif_absence
+        absence: false, // Scanned entries are never absences
+        motif_absence: null
       });
     } else {
-      if (scanner_action === 'sortie') {
+      if (effectiveAction === 'sortie') {
         pointage.heure_sortie = serverTime;
-      } else if (scanner_action === 'entree') {
+        pointage.absence = false;
+      } else if (effectiveAction === 'entree') {
         pointage.heure_entree = serverTime;
+        pointage.absence = false;
       } else {
         pointage.heure_sortie = heure_sortie || pointage.heure_sortie;
         pointage.heure_entree = heure_entree || pointage.heure_entree;
+        pointage.absence = absence !== undefined ? absence : pointage.absence;
+        pointage.motif_absence = motif_absence || pointage.motif_absence;
       }
-      pointage.absence = absence !== undefined ? absence : pointage.absence;
-      pointage.motif_absence = motif_absence || pointage.motif_absence;
     }
 
     // Calculer les retards et heures travaillées

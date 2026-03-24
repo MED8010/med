@@ -7,6 +7,8 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [message, setMessage] = useState({ type: '', text: '' });
   const scannerRef = useRef(null);
 
@@ -18,6 +20,16 @@ const ScannerPage = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    let timer;
+    if (cooldown > 0) {
+      timer = setInterval(() => {
+        setCooldown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const startScanner = () => {
     const scanner = new Html5QrcodeScanner('reader', {
@@ -33,6 +45,8 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
+    if (cooldown > 0 || loading) return;
+
     if (scannerRef.current) {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
     }
@@ -50,6 +64,10 @@ const ScannerPage = () => {
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
       setEmploye(res.data);
+
+      if (isAutoMode) {
+        await handlePointage('auto', res.data);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
@@ -60,22 +78,35 @@ const ScannerPage = () => {
     }
   };
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const handlePointage = async (type, emp = null) => {
+    const targetEmploye = emp || employe;
+    if (!targetEmploye) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
-        scanner_action: type, // 'entree' or 'sortie'
+        employe_id: targetEmploye._id,
+        scanner_action: type, // 'entree', 'sortie' or 'auto'
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const res = await apiClient.post('/pointages', payload);
+      const pointage = res.data.pointage;
+
+      let typeLabel = 'entrée';
+      if (type === 'sortie' || (type === 'auto' && pointage.heure_sortie)) {
+        typeLabel = 'sortie';
+      }
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage ${typeLabel === 'entrée' ? "d'entrée" : "de sortie"} enregistré pour ${targetEmploye.prenom} ${targetEmploye.nom}`
       });
+
+      // Start cooldown if in auto mode
+      if (isAutoMode) {
+        setCooldown(3);
+      }
 
       // Reset after success
       setTimeout(() => {
@@ -87,6 +118,9 @@ const ScannerPage = () => {
 
     } catch (err) {
       setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement du pointage' });
+      if (isAutoMode) {
+        setTimeout(handleReset, 3000);
+      }
     } finally {
       setLoading(false);
     }
@@ -118,9 +152,35 @@ const ScannerPage = () => {
 
       <div className="grid-2">
         <div className="section-card">
-          <h3>📷 Scanner</h3>
-          <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+            <h3 style={{ margin: 0 }}>📷 Scanner</h3>
+            <label className="switch-container" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>Mode Auto</span>
+              <input
+                type="checkbox"
+                checked={isAutoMode}
+                onChange={(e) => setIsAutoMode(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+            </label>
+          </div>
+
+          <div style={{ position: 'relative' }}>
+            <div id="reader" style={{ width: '100%' }}></div>
+            {cooldown > 0 && (
+              <div style={{
+                position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                color: 'white', zIndex: 10, borderRadius: 8
+              }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>⏳</div>
+                <div style={{ fontWeight: 'bold' }}>Pause de sécurité...</div>
+                <div style={{ fontSize: 24, fontWeight: 800 }}>{cooldown}s</div>
+              </div>
+            )}
+          </div>
+
+          {scanResult && !isAutoMode && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
