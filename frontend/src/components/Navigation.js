@@ -33,6 +33,7 @@ const NAV_CONFIG = {
       section: 'Sécurité',
       items: [
         { path: '/audit', icon: '📋', label: 'Journal Audit' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
@@ -65,6 +66,7 @@ const NAV_CONFIG = {
       section: 'Sécurité',
       items: [
         { path: '/audit', icon: '📋', label: 'Journal Audit' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
