@@ -18,6 +18,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/time-discipline', icon: '⏱️', label: 'Temps & Discipline' },
         { path: '/salary-analytics', icon: '💰', label: 'Analyse Salaires' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -50,6 +51,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/time-discipline', icon: '⏱️', label: 'Temps & Discipline' },
         { path: '/salary-analytics', icon: '💰', label: 'Analyse Salaires' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -75,6 +77,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
         { path: '/mes-conges', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Mes Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
@@ -85,6 +88,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
         { path: '/mes-conges-chef', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Gestion Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
