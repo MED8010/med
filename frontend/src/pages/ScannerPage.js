@@ -8,6 +8,8 @@ const ScannerPage = () => {
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
   const scannerRef = useRef(null);
 
   useEffect(() => {
@@ -33,11 +35,17 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
+    if (loading || cooldown) return;
+
+    if (!isAutoMode) {
+      if (scannerRef.current) {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
+      setScanResult(result);
+      loadEmploye(result);
+    } else {
+      handleAutoPointage(result);
     }
-    setScanResult(result);
-    loadEmploye(result);
   };
 
   const onScanError = (err) => {
@@ -71,10 +79,12 @@ const ScannerPage = () => {
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const res = await apiClient.post('/pointages', payload);
+      const actionType = res.data.pointage.heure_sortie && type !== 'entree' ? 'sortie' : 'entrée';
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${actionType} enregistré pour ${employe.prenom} ${employe.nom}`
       });
 
       // Reset after success
@@ -89,6 +99,51 @@ const ScannerPage = () => {
       setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement du pointage' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoPointage = async (matricule) => {
+    setLoading(true);
+    setCooldown(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      // 1. Load employee
+      const empRes = await apiClient.get(`/employes/matricule/${matricule}`);
+      const emp = empRes.data;
+      setEmploye(emp);
+
+      // 2. Register auto pointage
+      const payload = {
+        employe_id: emp._id,
+        scanner_action: 'auto',
+        absence: false
+      };
+
+      const res = await apiClient.post('/pointages', payload);
+      const actionType = res.data.pointage.heure_sortie ? 'sortie' : 'entrée';
+
+      setMessage({
+        type: 'success',
+        text: `Auto-pointage d'${actionType} pour ${emp.prenom} ${emp.nom}`
+      });
+
+      // 3. Cooldown before next scan
+      setTimeout(() => {
+        setEmploye(null);
+        setScanResult(null);
+        setMessage({ type: '', text: '' });
+        setLoading(false);
+        setCooldown(false);
+      }, 3000);
+
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erreur auto-pointage: matricule inconnu ou erreur serveur' });
+      setLoading(false);
+      setTimeout(() => {
+        setMessage({ type: '', text: '' });
+        setCooldown(false);
+      }, 2000);
     }
   };
 
@@ -117,10 +172,33 @@ const ScannerPage = () => {
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
-          <h3>📷 Scanner</h3>
-          <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+        <div className="section-card" style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+            <h3>📷 Scanner</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>Mode Auto</span>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={isAutoMode}
+                  onChange={(e) => setIsAutoMode(e.target.checked)}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div id="reader" style={{ width: '100%', overflow: 'hidden', borderRadius: 12 }}></div>
+
+          {cooldown && (
+            <div className="cooldown-overlay">
+              <div className="cooldown-spinner"></div>
+              <p style={{ fontWeight: 700 }}>Traitement en cours...</p>
+              <div className="auto-badge">Ne pas bouger</div>
+            </div>
+          )}
+
+          {scanResult && !isAutoMode && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
