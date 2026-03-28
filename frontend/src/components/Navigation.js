@@ -18,6 +18,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/time-discipline', icon: '⏱️', label: 'Temps & Discipline' },
         { path: '/salary-analytics', icon: '💰', label: 'Analyse Salaires' },
+        { path: '/roadmap', icon: '🗺️', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -50,6 +51,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/time-discipline', icon: '⏱️', label: 'Temps & Discipline' },
         { path: '/salary-analytics', icon: '💰', label: 'Analyse Salaires' },
+        { path: '/roadmap', icon: '🗺️', label: 'Roadmap Futur' },
       ]
     },
     {
