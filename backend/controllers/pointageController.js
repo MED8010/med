@@ -5,7 +5,7 @@ const Conge = require('../models/Conge');
 // Créer ou mettre à jour un pointage
 const createPointage = async (req, res) => {
   try {
-    const { employe_id, date, heure_entree, heure_sortie, absence, motif_absence, scanner_action } = req.body;
+    let { employe_id, date, heure_entree, heure_sortie, absence, motif_absence, scanner_action } = req.body;
 
     const today = new Date();
     const serverTime = today.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -13,13 +13,23 @@ const createPointage = async (req, res) => {
 
     // If scanner_action is provided, use server time and ignore client time
     const finalDate = scanner_action ? serverDate : date;
-    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
-    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
 
     let pointage = await Pointage.findOne({
       employe: employe_id,
       date: new Date(finalDate)
     });
+
+    // Handle auto mode: decide between entree and sortie
+    if (scanner_action === 'auto') {
+      if (!pointage || !pointage.heure_entree) {
+        scanner_action = 'entree';
+      } else {
+        scanner_action = 'sortie';
+      }
+    }
+
+    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
+    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
 
     if (!pointage) {
       pointage = new Pointage({
