@@ -34,6 +34,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/audit', icon: '📋', label: 'Journal Audit' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
+        { path: '/roadmap', icon: '🗺️', label: 'Roadmap Futur' },
       ]
     },
   ],
@@ -66,6 +67,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/audit', icon: '📋', label: 'Journal Audit' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
+        { path: '/roadmap', icon: '🗺️', label: 'Roadmap Futur' },
       ]
     },
   ],
