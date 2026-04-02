@@ -8,7 +8,25 @@ const ScannerPage = () => {
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [isAutoMode, setIsAutoMode] = useState(true);
+  const [cooldown, setCooldown] = useState(false);
+
   const scannerRef = useRef(null);
+  const isAutoRef = useRef(isAutoMode);
+  const loadingRef = useRef(loading);
+  const cooldownRef = useRef(cooldown);
+
+  useEffect(() => {
+    isAutoRef.current = isAutoMode;
+  }, [isAutoMode]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    cooldownRef.current = cooldown;
+  }, [cooldown]);
 
   useEffect(() => {
     startScanner();
@@ -25,7 +43,7 @@ const ScannerPage = () => {
         width: 250,
         height: 250,
       },
-      fps: 5,
+      fps: 10,
     });
 
     scanner.render(onScanSuccess, onScanError);
@@ -33,11 +51,17 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+    if (loadingRef.current || cooldownRef.current) return;
+
+    if (!isAutoRef.current) {
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+        }
+        setScanResult(result);
+        loadEmploye(result);
+    } else {
+        processAutoScan(result);
     }
-    setScanResult(result);
-    loadEmploye(result);
   };
 
   const onScanError = (err) => {
@@ -50,11 +74,55 @@ const ScannerPage = () => {
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
       setEmploye(res.data);
+      return res.data;
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
-      // Restart scanner if not found
-      startScanner();
+      if (!isAutoRef.current) startScanner();
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processAutoScan = async (matricule) => {
+    setCooldown(true);
+    setLoading(true);
+    try {
+      const emp = await loadEmploye(matricule);
+      if (!emp) {
+        setCooldown(false);
+        return;
+      }
+
+      const payload = {
+        employe_id: emp._id,
+        scanner_action: 'auto',
+        absence: false
+      };
+
+      const res = await apiClient.post('/pointages', payload);
+      const pointageType = res.data.pointage.heure_sortie && !res.data.pointage.heure_entree ? 'sortie' :
+                          (res.data.pointage.heure_entree && res.data.pointage.updatedAt !== res.data.pointage.createdAt ? 'sortie' : 'entrée');
+
+      // Better way to detect if it was an entry or exit from the response
+      // If server just updated the document (added heure_sortie), it's a sortie.
+      // But the logic in controller is a bit complex. Let's just use a simple message.
+
+      setMessage({
+        type: 'success',
+        text: `Pointage automatique enregistré pour ${emp.prenom} ${emp.nom}`
+      });
+
+      setTimeout(() => {
+        setEmploye(null);
+        setMessage({ type: '', text: '' });
+        setCooldown(false);
+      }, 3000);
+
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erreur lors du pointage automatique' });
+      setCooldown(false);
     } finally {
       setLoading(false);
     }
@@ -114,13 +182,42 @@ const ScannerPage = () => {
           <h1>Scanner QR Code</h1>
           <p className="page-subtitle">Pointeuse Digitale Haute Précision</p>
         </div>
+        <div className="d-flex align-center gap-12">
+            <span className="fw-bold" style={{ color: isAutoMode ? 'var(--success)' : 'var(--text-muted)' }}>
+                {isAutoMode ? '⚡ Mode Auto Actif' : '✋ Mode Manuel'}
+            </span>
+            <label className="switch">
+                <input
+                    type="checkbox"
+                    checked={isAutoMode}
+                    onChange={(e) => {
+                        setIsAutoMode(e.target.checked);
+                        handleReset();
+                    }}
+                />
+                <span className="slider round"></span>
+            </label>
+        </div>
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
+        <div className="section-card" style={{ position: 'relative' }}>
           <h3>📷 Scanner</h3>
-          <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+          <div id="reader" style={{ width: '100%', border: 'none' }}></div>
+
+          {cooldown && (
+            <div style={{
+                position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.1)',
+                zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: 'inherit', backdropFilter: 'blur(2px)'
+            }}>
+                <div className="badge badge-primary" style={{ padding: '10px 20px', fontSize: 14 }}>
+                   ⏳ Cooldown actif (3s)
+                </div>
+            </div>
+          )}
+
+          {scanResult && !isAutoMode && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
