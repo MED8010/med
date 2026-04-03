@@ -11,10 +11,20 @@ const createPointage = async (req, res) => {
     const serverTime = today.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false });
     const serverDate = today.toISOString().split('T')[0];
 
-    // If scanner_action is provided, use server time and ignore client time
-    const finalDate = scanner_action ? serverDate : date;
-    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
-    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
+    // Logic for automatic mode: determine if it's entry or exit
+    let effectiveAction = scanner_action;
+    if (scanner_action === 'auto') {
+      const existing = await Pointage.findOne({
+        employe: employe_id,
+        date: new Date(serverDate)
+      });
+      effectiveAction = (!existing || !existing.heure_entree) ? 'entree' : 'sortie';
+    }
+
+    // If effectiveAction is provided, use server time and ignore client time
+    const finalDate = effectiveAction ? serverDate : date;
+    const finalHeureEntree = (effectiveAction === 'entree') ? serverTime : heure_entree;
+    const finalHeureSortie = (effectiveAction === 'sortie') ? serverTime : heure_sortie;
 
     let pointage = await Pointage.findOne({
       employe: employe_id,
@@ -31,9 +41,9 @@ const createPointage = async (req, res) => {
         motif_absence
       });
     } else {
-      if (scanner_action === 'sortie') {
+      if (effectiveAction === 'sortie') {
         pointage.heure_sortie = serverTime;
-      } else if (scanner_action === 'entree') {
+      } else if (effectiveAction === 'entree') {
         pointage.heure_entree = serverTime;
       } else {
         pointage.heure_sortie = heure_sortie || pointage.heure_sortie;
