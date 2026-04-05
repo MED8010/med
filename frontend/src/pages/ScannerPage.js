@@ -7,8 +7,21 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const scannerRef = useRef(null);
+
+  // Use refs to mirror state so they're accessible inside the scanner callback
+  const isAutoModeRef = useRef(isAutoMode);
+  const loadingRef = useRef(loading);
+  const cooldownRef = useRef(cooldown);
+
+  useEffect(() => {
+    isAutoModeRef.current = isAutoMode;
+    loadingRef.current = loading;
+    cooldownRef.current = cooldown;
+  }, [isAutoMode, loading, cooldown]);
 
   useEffect(() => {
     startScanner();
@@ -33,11 +46,18 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+    // Prevent scanning if already processing or in cooldown
+    if (loadingRef.current || cooldownRef.current) return;
+
+    if (isAutoModeRef.current) {
+        handleAutoPointage(result);
+    } else {
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+        }
+        setScanResult(result);
+        loadEmploye(result);
     }
-    setScanResult(result);
-    loadEmploye(result);
   };
 
   const onScanError = (err) => {
@@ -57,6 +77,51 @@ const ScannerPage = () => {
       startScanner();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoPointage = async (matricule) => {
+    setLoading(true);
+    setCooldown(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+        // 1. Get employee
+        const empRes = await apiClient.get(`/employes/matricule/${matricule}`);
+        const emp = empRes.data;
+        setEmploye(emp);
+
+        // 2. Perform auto pointage
+        const payload = {
+            employe_id: emp._id,
+            scanner_action: 'auto',
+            absence: false
+        };
+
+        const res = await apiClient.post('/pointages', payload);
+        const action = res.data.effectiveAction;
+
+        setMessage({
+            type: 'success',
+            text: `Pointage d'${action === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${emp.prenom} ${emp.nom}`
+        });
+
+        // 3. Clear and wait for cooldown
+        setTimeout(() => {
+            setEmploye(null);
+            setMessage({ type: '', text: '' });
+            setCooldown(false);
+        }, 3000);
+
+    } catch (err) {
+        setMessage({ type: 'error', text: 'Erreur lors du pointage automatique' });
+        setTimeout(() => {
+            setCooldown(false);
+            setMessage({ type: '', text: '' });
+            setEmploye(null);
+        }, 3000);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -114,13 +179,35 @@ const ScannerPage = () => {
           <h1>Scanner QR Code</h1>
           <p className="page-subtitle">Pointeuse Digitale Haute Précision</p>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--bg-card)', padding: '10px 20px', borderRadius: 12, border: '1px solid var(--border)' }}>
+            <span style={{ fontWeight: 600, fontSize: 14 }}>Mode Automatique</span>
+            <label className="switch">
+                <input
+                    type="checkbox"
+                    checked={isAutoMode}
+                    onChange={(e) => {
+                        setIsAutoMode(e.target.checked);
+                        if (!e.target.checked && !scannerRef.current) {
+                            startScanner();
+                        }
+                    }}
+                />
+                <span className="slider round"></span>
+            </label>
+        </div>
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
+        <div className="section-card" style={{ position: 'relative' }}>
           <h3>📷 Scanner</h3>
           <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+          {cooldown && (
+              <div className="loading-overlay" style={{ background: 'rgba(0,0,0,0.4)', color: 'white', flexDirection: 'column' }}>
+                  <div className="spinner"></div>
+                  <p style={{ marginTop: 15, fontWeight: 700 }}>Traitement... Patientez</p>
+              </div>
+          )}
+          {scanResult && !isAutoMode && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
@@ -131,7 +218,7 @@ const ScannerPage = () => {
 
         <div className="section-card">
           <h3>👤 Informations Employé</h3>
-          {loading && <div className="spinner"></div>}
+          {loading && !cooldown && <div className="spinner"></div>}
 
           {message.text && (
             <div className={`message ${message.type === 'error' ? 'error-message' : 'success-message'}`}>
@@ -165,24 +252,26 @@ const ScannerPage = () => {
                 <span>{employe.poste || 'Collaborateur'}</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
-                  onClick={() => handlePointage('entree')}
-                  disabled={loading}
-                >
-                  📥 Pointer Entrée
-                </button>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
-                  onClick={() => handlePointage('sortie')}
-                  disabled={loading}
-                >
-                  📤 Pointer Sortie
-                </button>
-              </div>
+              {!isAutoMode && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                    <button
+                      className="btn-primary"
+                      style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
+                      onClick={() => handlePointage('entree')}
+                      disabled={loading}
+                    >
+                      📥 Pointer Entrée
+                    </button>
+                    <button
+                      className="btn-primary"
+                      style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
+                      onClick={() => handlePointage('sortie')}
+                      disabled={loading}
+                    >
+                      📤 Pointer Sortie
+                    </button>
+                  </div>
+              )}
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
