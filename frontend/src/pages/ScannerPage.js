@@ -8,7 +8,26 @@ const ScannerPage = () => {
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
   const scannerRef = useRef(null);
+
+  // Refs to access current state in the scanner callback without re-rendering
+  const isAutoModeRef = useRef(isAutoMode);
+  const loadingRef = useRef(loading);
+  const cooldownRef = useRef(cooldown);
+
+  useEffect(() => {
+    isAutoModeRef.current = isAutoMode;
+  }, [isAutoMode]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    cooldownRef.current = cooldown;
+  }, [cooldown]);
 
   useEffect(() => {
     startScanner();
@@ -25,7 +44,7 @@ const ScannerPage = () => {
         width: 250,
         height: 250,
       },
-      fps: 5,
+      fps: 10,
     });
 
     scanner.render(onScanSuccess, onScanError);
@@ -33,9 +52,14 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+    if (loadingRef.current || cooldownRef.current) return;
+
+    if (!isAutoModeRef.current) {
+      if (scannerRef.current) {
+          scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
     }
+
     setScanResult(result);
     loadEmploye(result);
   };
@@ -49,14 +73,55 @@ const ScannerPage = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const employeData = res.data;
+      setEmploye(employeData);
+
+      if (isAutoModeRef.current) {
+        await handlePointageAuto(employeData);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
-      // Restart scanner if not found
-      startScanner();
+      if (!isAutoModeRef.current) {
+        startScanner();
+      } else {
+        triggerCooldown();
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const triggerCooldown = () => {
+    setCooldown(true);
+    setTimeout(() => {
+      setCooldown(false);
+      setScanResult(null);
+      setEmploye(null);
+      setMessage({ type: '', text: '' });
+    }, 3000);
+  };
+
+  const handlePointageAuto = async (emp) => {
+    try {
+      const payload = {
+        employe_id: emp._id,
+        scanner_action: 'auto',
+        absence: false
+      };
+
+      const res = await apiClient.post('/pointages', payload);
+      const actionLabel = res.data.effectiveAction === 'entree' ? 'entrée' : 'sortie';
+
+      setMessage({
+        type: 'success',
+        text: `Pointage d'${actionLabel} enregistré pour ${emp.prenom} ${emp.nom}`
+      });
+
+      triggerCooldown();
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement automatique' });
+      triggerCooldown();
     }
   };
 
@@ -96,6 +161,7 @@ const ScannerPage = () => {
     setEmploye(null);
     setScanResult(null);
     setMessage({ type: '', text: '' });
+    setCooldown(false);
     if (scannerRef.current) {
         scannerRef.current.clear().then(() => {
             startScanner();
@@ -114,13 +180,42 @@ const ScannerPage = () => {
           <h1>Scanner QR Code</h1>
           <p className="page-subtitle">Pointeuse Digitale Haute Précision</p>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Mode Automatique</span>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={isAutoMode}
+              onChange={(e) => setIsAutoMode(e.target.checked)}
+            />
+            <span className="slider round"></span>
+          </label>
+        </div>
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
-          <h3>📷 Scanner</h3>
-          <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+        <div className="section-card" style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+            <h3 style={{ margin: 0 }}>📷 Scanner</h3>
+            {isAutoMode && (
+              <span className="badge badge-primary">AUTO-SCAN ACTIF</span>
+            )}
+          </div>
+
+          <div id="reader" style={{ width: '100%', overflow: 'hidden', borderRadius: 12 }}></div>
+
+          {cooldown && (
+            <div style={{
+              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 10, borderRadius: 16, color: 'white', flexDirection: 'column'
+            }}>
+              <div className="spinner" style={{ marginBottom: 15 }}></div>
+              <p>Traitement terminé. Prêt dans 3s...</p>
+            </div>
+          )}
+
+          {!isAutoMode && scanResult && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
@@ -157,32 +252,45 @@ const ScannerPage = () => {
               </div>
 
               <div className="detail-item" style={{ marginBottom: 15 }}>
-                <label>Service</label>
-                <span>{employe.service?.nom_service}</span>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Service</label>
+                <span style={{ fontSize: 15, fontWeight: 600 }}>{employe.service?.nom_service}</span>
               </div>
               <div className="detail-item" style={{ marginBottom: 24 }}>
-                <label>Poste</label>
-                <span>{employe.poste || 'Collaborateur'}</span>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Poste</label>
+                <span style={{ fontSize: 15, fontWeight: 600 }}>{employe.poste || 'Collaborateur'}</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
-                  onClick={() => handlePointage('entree')}
-                  disabled={loading}
-                >
-                  📥 Pointer Entrée
-                </button>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
-                  onClick={() => handlePointage('sortie')}
-                  disabled={loading}
-                >
-                  📤 Pointer Sortie
-                </button>
-              </div>
+              {!isAutoMode && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                  <button
+                    className="btn-primary"
+                    style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
+                    onClick={() => handlePointage('entree')}
+                    disabled={loading}
+                  >
+                    📥 Pointer Entrée
+                  </button>
+                  <button
+                    className="btn-primary"
+                    style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
+                    onClick={() => handlePointage('sortie')}
+                    disabled={loading}
+                  >
+                    📤 Pointer Sortie
+                  </button>
+                </div>
+              )}
+
+              {isAutoMode && (
+                <div style={{
+                  padding: 20, background: 'var(--bg-hover)', borderRadius: 12,
+                  textAlign: 'center', border: '1px dashed var(--primary)'
+                }}>
+                  <p style={{ margin: 0, fontWeight: 600, color: 'var(--primary)' }}>
+                    Traitement automatique en cours...
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
