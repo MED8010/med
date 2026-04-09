@@ -7,8 +7,19 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
   const scannerRef = useRef(null);
+  const loadingRef = useRef(loading);
+  const cooldownRef = useRef(cooldown);
+  const isAutoModeRef = useRef(isAutoMode);
+
+  // Keep refs in sync with state
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+  useEffect(() => { cooldownRef.current = cooldown; }, [cooldown]);
+  useEffect(() => { isAutoModeRef.current = isAutoMode; }, [isAutoMode]);
 
   useEffect(() => {
     startScanner();
@@ -25,7 +36,7 @@ const ScannerPage = () => {
         width: 250,
         height: 250,
       },
-      fps: 5,
+      fps: 10,
     });
 
     scanner.render(onScanSuccess, onScanError);
@@ -33,9 +44,15 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+    // Prevent multiple simultaneous scans
+    if (loadingRef.current || cooldownRef.current) return;
+
+    if (!isAutoModeRef.current) {
+      if (scannerRef.current) {
+          scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
     }
+
     setScanResult(result);
     loadEmploye(result);
   };
@@ -49,44 +66,64 @@ const ScannerPage = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const employeData = res.data;
+      setEmploye(employeData);
+
+      if (isAutoModeRef.current) {
+        await handlePointage('auto', employeData);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
-      // Restart scanner if not found
-      startScanner();
+      if (!isAutoModeRef.current) startScanner();
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const handlePointage = async (type, targetEmploye = null) => {
+    const emp = targetEmploye || employe;
+    if (!emp) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
-        scanner_action: type, // 'entree' or 'sortie'
+        employe_id: emp._id,
+        scanner_action: type,
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const res = await apiClient.post('/pointages', payload);
+      const actionLabel = res.data.effectiveAction === 'entree' ? 'entrée' : 'sortie';
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${actionLabel} enregistré pour ${emp.prenom} ${emp.nom}`
       });
 
-      // Reset after success
-      setTimeout(() => {
-        setEmploye(null);
-        setScanResult(null);
-        setMessage({ type: '', text: '' });
-        startScanner();
-      }, 3000);
+      if (isAutoModeRef.current) {
+        setCooldown(true);
+        setTimeout(() => {
+          setCooldown(false);
+          setEmploye(null);
+          setScanResult(null);
+          setMessage({ type: '', text: '' });
+        }, 3000);
+      } else {
+        setTimeout(() => {
+          setEmploye(null);
+          setScanResult(null);
+          setMessage({ type: '', text: '' });
+          startScanner();
+        }, 3000);
+      }
 
     } catch (err) {
       setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement du pointage' });
+      if (isAutoModeRef.current) {
+        setCooldown(true);
+        setTimeout(() => setCooldown(false), 3000);
+      }
     } finally {
       setLoading(false);
     }
@@ -95,6 +132,7 @@ const ScannerPage = () => {
   const handleReset = () => {
     setEmploye(null);
     setScanResult(null);
+    setCooldown(false);
     setMessage({ type: '', text: '' });
     if (scannerRef.current) {
         scannerRef.current.clear().then(() => {
@@ -114,17 +152,43 @@ const ScannerPage = () => {
           <h1>Scanner QR Code</h1>
           <p className="page-subtitle">Pointeuse Digitale Haute Précision</p>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Mode Automatique</span>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={isAutoMode}
+              onChange={(e) => {
+                setIsAutoMode(e.target.checked);
+                if (employe) handleReset();
+              }}
+            />
+            <span className="slider round"></span>
+          </label>
+        </div>
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
+        <div className="section-card" style={{ position: 'relative' }}>
           <h3>📷 Scanner</h3>
+          {cooldown && (
+            <div className="cooldown-overlay">
+              <div className="cooldown-spinner"></div>
+              <p>Scan réussi !</p>
+              <p style={{ fontSize: 12, opacity: 0.8 }}>Patientez 3s...</p>
+            </div>
+          )}
           <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+          {scanResult && !isAutoMode && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
               </button>
+            </div>
+          )}
+          {isAutoMode && (
+            <div style={{ marginTop: 15, padding: 10, background: 'var(--info-bg)', borderRadius: 8, fontSize: 12, color: 'var(--info)' }}>
+              ℹ️ Le mode auto détecte l'employé et enregistre son pointage (entrée ou sortie) instantanément.
             </div>
           )}
         </div>
@@ -165,24 +229,32 @@ const ScannerPage = () => {
                 <span>{employe.poste || 'Collaborateur'}</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
-                  onClick={() => handlePointage('entree')}
-                  disabled={loading}
-                >
-                  📥 Pointer Entrée
-                </button>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
-                  onClick={() => handlePointage('sortie')}
-                  disabled={loading}
-                >
-                  📤 Pointer Sortie
-                </button>
-              </div>
+              {!isAutoMode && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                  <button
+                    className="btn-primary"
+                    style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
+                    onClick={() => handlePointage('entree')}
+                    disabled={loading}
+                  >
+                    📥 Pointer Entrée
+                  </button>
+                  <button
+                    className="btn-primary"
+                    style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
+                    onClick={() => handlePointage('sortie')}
+                    disabled={loading}
+                  >
+                    📤 Pointer Sortie
+                  </button>
+                </div>
+              )}
+
+              {isAutoMode && (
+                <div style={{ textAlign: 'center', padding: 20, border: '2px dashed var(--success)', borderRadius: 12 }}>
+                  <span style={{ color: 'var(--success)', fontWeight: 700 }}>✓ Pointage Automatique Validé</span>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
