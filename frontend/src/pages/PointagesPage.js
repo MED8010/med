@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const PointagesPage = () => {
   const [retards, setRetards] = useState([]);
   const [absences, setAbsences] = useState([]);
-  const [allPointages, setAllPointages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('retards');
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +26,58 @@ const PointagesPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const todayStr = new Date().toLocaleDateString('fr-FR');
+
+    doc.setFontSize(20);
+    doc.text('Rapport des Pointages du Jour', 14, 22);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Date du rapport: ${todayStr}`, 14, 30);
+
+    // Section Retards
+    doc.setFontSize(14);
+    doc.setTextColor(0);
+    doc.text('1. Retards enregistrés', 14, 45);
+
+    const retardData = retards.map(r => [
+      `${r.employe?.prenom} ${r.employe?.nom}`,
+      r.employe?.matricule,
+      r.employe?.service?.nom_service || '—',
+      r.heure_entree,
+      `+${r.retard_minutes} min`
+    ]);
+
+    doc.autoTable({
+      startY: 50,
+      head: [['Employé', 'Matricule', 'Service', 'Entrée', 'Retard']],
+      body: retardData.length > 0 ? retardData : [['Aucun retard', '', '', '', '']],
+      headStyles: { fillColor: [245, 158, 11] }
+    });
+
+    // Section Absences
+    const lastY = doc.lastAutoTable.finalY || 50;
+    doc.setFontSize(14);
+    doc.text('2. Absences enregistrées', 14, lastY + 20);
+
+    const absenceData = absences.map(a => [
+      `${a.employe?.prenom} ${a.employe?.nom}`,
+      a.employe?.matricule,
+      a.employe?.service?.nom_service || '—',
+      a.motif_absence || 'Non spécifié'
+    ]);
+
+    doc.autoTable({
+      startY: lastY + 25,
+      head: [['Employé', 'Matricule', 'Service', 'Motif']],
+      body: absenceData.length > 0 ? absenceData : [['Aucune absence', '', '', '']],
+      headStyles: { fillColor: [239, 68, 68] }
+    });
+
+    doc.save(`Rapport_Pointages_${todayStr.replace(/\//g, '-')}.pdf`);
   };
 
   if (loading) return <div className="loading"><div className="spinner"></div>Chargement des pointages...</div>;
@@ -48,7 +101,10 @@ const PointagesPage = () => {
           <h1>Suivi des Pointages</h1>
           <p className="page-subtitle">📅 {today}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-secondary" onClick={exportPDF}>📄 Exporter PDF</button>
+          <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}
