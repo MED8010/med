@@ -7,8 +7,20 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
   const scannerRef = useRef(null);
+  const isAutoModeRef = useRef(isAutoMode);
+  const loadingRef = useRef(loading);
+  const cooldownRef = useRef(cooldown);
+
+  useEffect(() => {
+    isAutoModeRef.current = isAutoMode;
+    loadingRef.current = loading;
+    cooldownRef.current = cooldown;
+  }, [isAutoMode, loading, cooldown]);
 
   useEffect(() => {
     startScanner();
@@ -17,6 +29,7 @@ const ScannerPage = () => {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startScanner = () => {
@@ -25,7 +38,7 @@ const ScannerPage = () => {
         width: 250,
         height: 250,
       },
-      fps: 5,
+      fps: 10,
     });
 
     scanner.render(onScanSuccess, onScanError);
@@ -33,11 +46,18 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
+    // Prevent multiple scans during loading or cooldown
+    if (loadingRef.current || cooldownRef.current) return;
+
+    if (isAutoModeRef.current) {
+      handleAutoPointage(result);
+    } else {
+      if (scannerRef.current) {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
+      setScanResult(result);
+      loadEmploye(result);
     }
-    setScanResult(result);
-    loadEmploye(result);
   };
 
   const onScanError = (err) => {
@@ -55,6 +75,49 @@ const ScannerPage = () => {
       setScanResult(null);
       // Restart scanner if not found
       startScanner();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAutoPointage = async (matricule) => {
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const empRes = await apiClient.get(`/employes/matricule/${matricule}`);
+      const emp = empRes.data;
+      setEmploye(emp);
+
+      const payload = {
+        employe_id: emp._id,
+        scanner_action: 'auto',
+        absence: false
+      };
+
+      const res = await apiClient.post('/pointages', payload);
+      const action = res.data.effectiveAction;
+
+      setMessage({
+        type: 'success',
+        text: `[AUTO] Pointage d'${action === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${emp.prenom} ${emp.nom}`
+      });
+
+      // Start cooldown to prevent multiple scans
+      setCooldown(true);
+      setTimeout(() => {
+        setCooldown(false);
+        setEmploye(null);
+        setMessage({ type: '', text: '' });
+      }, 3000);
+
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erreur ou employé non trouvé' });
+      setCooldown(true);
+      setTimeout(() => {
+        setCooldown(false);
+        setMessage({ type: '', text: '' });
+      }, 2000);
     } finally {
       setLoading(false);
     }
@@ -117,9 +180,31 @@ const ScannerPage = () => {
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
-          <h3>📷 Scanner</h3>
-          <div id="reader" style={{ width: '100%' }}></div>
+        <div className="section-card" style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ margin: 0 }}>📷 Scanner</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>Mode Auto</span>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={isAutoMode}
+                  onChange={(e) => setIsAutoMode(e.target.checked)}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          <div id="reader" style={{ width: '100%', overflow: 'hidden', borderRadius: 12 }}></div>
+
+          {cooldown && (
+            <div className="cooldown-overlay">
+              <div className="cooldown-spinner"></div>
+              <p style={{ fontWeight: 700 }}>Traitement... Patientez</p>
+            </div>
+          )}
+
           {scanResult && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
