@@ -7,8 +7,26 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
   const scannerRef = useRef(null);
+  const isAutoModeRef = useRef(isAutoMode);
+  const loadingRef = useRef(loading);
+  const cooldownRef = useRef(cooldown);
+
+  useEffect(() => {
+    isAutoModeRef.current = isAutoMode;
+  }, [isAutoMode]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    cooldownRef.current = cooldown;
+  }, [cooldown]);
 
   useEffect(() => {
     startScanner();
@@ -33,11 +51,20 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+    if (loadingRef.current || cooldownRef.current) return;
+
+    if (!isAutoModeRef.current) {
+      if (scannerRef.current) {
+          scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
     }
+
     setScanResult(result);
-    loadEmploye(result);
+    if (isAutoModeRef.current) {
+      handleAutoPointage(result);
+    } else {
+      loadEmploye(result);
+    }
   };
 
   const onScanError = (err) => {
@@ -53,10 +80,50 @@ const ScannerPage = () => {
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
-      // Restart scanner if not found
-      startScanner();
+      // Restart scanner if not found in manual mode
+      if (!isAutoModeRef.current) startScanner();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoPointage = async (matricule) => {
+    setLoading(true);
+    setCooldown(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      // 1. Get employee
+      const empRes = await apiClient.get(`/employes/matricule/${matricule}`);
+      const targetEmploye = empRes.data;
+      setEmploye(targetEmploye);
+
+      // 2. Register auto pointage
+      const res = await apiClient.post('/pointages', {
+        employe_id: targetEmploye._id,
+        scanner_action: 'auto'
+      });
+
+      const action = res.data.effectiveAction;
+      setMessage({
+        type: 'success',
+        text: `Pointage d'${action === 'entree' ? 'entrée' : 'sortie'} auto pour ${targetEmploye.prenom} ${targetEmploye.nom}`
+      });
+
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err.response?.status === 404 ? 'Employé non reconnu' : 'Erreur pointage automatique'
+      });
+    } finally {
+      setLoading(false);
+      // Cooldown to prevent multiple scans of the same badge
+      setTimeout(() => {
+        setCooldown(false);
+        setEmploye(null);
+        setScanResult(null);
+        setMessage({ type: '', text: '' });
+      }, 3000);
     }
   };
 
@@ -71,10 +138,12 @@ const ScannerPage = () => {
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const res = await apiClient.post('/pointages', payload);
+      const effectiveAction = res.data.effectiveAction || type;
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${effectiveAction === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
       });
 
       // Reset after success
@@ -114,13 +183,44 @@ const ScannerPage = () => {
           <h1>Scanner QR Code</h1>
           <p className="page-subtitle">Pointeuse Digitale Haute Précision</p>
         </div>
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px', background: 'var(--bg-card)', padding: '10px 20px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+          <span style={{ fontWeight: '600', fontSize: '14px' }}>Mode Automatique</span>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={isAutoMode}
+              onChange={(e) => {
+                setIsAutoMode(e.target.checked);
+                if (!e.target.checked) handleReset();
+              }}
+            />
+            <span className="slider round"></span>
+          </label>
+        </div>
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
-          <h3>📷 Scanner</h3>
-          <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+        <div className="section-card" style={{ position: 'relative', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ margin: 0 }}>📷 Scanner</h3>
+            {isAutoMode && <span className="badge badge-success" style={{ animation: 'pulse 2s infinite' }}>AUTO ACTIVE</span>}
+          </div>
+
+          <div id="reader" style={{ width: '100%', border: 'none' }}></div>
+
+          {cooldown && (
+            <div className="cooldown-overlay" style={{
+              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              zIndex: 10, backdropFilter: 'blur(4px)', color: 'white', animation: 'fadeIn 0.3s'
+            }}>
+              <div className="spinner" style={{ marginBottom: '15px', borderTopColor: 'var(--success)' }}></div>
+              <h4 style={{ margin: 0 }}>Traitement...</h4>
+              <p style={{ fontSize: '12px', opacity: 0.8 }}>Patientez 3 secondes</p>
+            </div>
+          )}
+
+          {!isAutoMode && scanResult && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
