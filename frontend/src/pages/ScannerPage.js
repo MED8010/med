@@ -7,8 +7,19 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
   const scannerRef = useRef(null);
+  const isAutoModeRef = useRef(isAutoMode);
+  const loadingRef = useRef(loading);
+  const cooldownRef = useRef(cooldown);
+
+  // Sync refs with state to use in scanner callback without re-rendering scanner
+  useEffect(() => { isAutoModeRef.current = isAutoMode; }, [isAutoMode]);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+  useEffect(() => { cooldownRef.current = cooldown; }, [cooldown]);
 
   useEffect(() => {
     startScanner();
@@ -17,15 +28,13 @@ const ScannerPage = () => {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startScanner = () => {
     const scanner = new Html5QrcodeScanner('reader', {
-      qrbox: {
-        width: 250,
-        height: 250,
-      },
-      fps: 5,
+      qrbox: { width: 250, height: 250 },
+      fps: 10,
     });
 
     scanner.render(onScanSuccess, onScanError);
@@ -33,11 +42,20 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
-    }
+    // Prevent multiple scans if already processing or in cooldown
+    if (loadingRef.current || cooldownRef.current) return;
+
     setScanResult(result);
-    loadEmploye(result);
+
+    if (isAutoModeRef.current) {
+      handleAutoPointage(result);
+    } else {
+      // In manual mode, we clear scanner to show info
+      if (scannerRef.current) {
+          scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
+      loadEmploye(result);
+    }
   };
 
   const onScanError = (err) => {
@@ -53,22 +71,66 @@ const ScannerPage = () => {
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
-      // Restart scanner if not found
       startScanner();
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePointage = async (type) => {
+  const handleAutoPointage = async (matricule) => {
+    setLoading(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      // 1. Get employee first
+      const empRes = await apiClient.get(`/employes/matricule/${matricule}`);
+      const emp = empRes.data;
+      setEmploye(emp);
+
+      // 2. Perform auto pointage
+      const payload = {
+        employe_id: emp._id,
+        scanner_action: 'auto',
+      };
+
+      const res = await apiClient.post('/pointages', payload);
+      const { effectiveAction } = res.data;
+
+      setMessage({
+        type: 'success',
+        text: `Pointage d'${effectiveAction === 'entree' ? 'entrée' : 'sortie'} auto pour ${emp.prenom} ${emp.nom}`
+      });
+
+      // 3. Trigger Cooldown
+      setCooldown(true);
+      setTimeout(() => {
+        setCooldown(false);
+        setEmploye(null);
+        setScanResult(null);
+        setMessage({ type: '', text: '' });
+      }, 3000);
+
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Erreur lors du pointage automatique' });
+      setCooldown(true);
+      setTimeout(() => {
+        setCooldown(false);
+        setMessage({ type: '', text: '' });
+        setScanResult(null);
+      }, 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualPointage = async (type) => {
     if (!employe) return;
 
     setLoading(true);
     try {
       const payload = {
         employe_id: employe._id,
-        scanner_action: type, // 'entree' or 'sortie'
-        absence: false
+        scanner_action: type,
       };
 
       await apiClient.post('/pointages', payload);
@@ -77,16 +139,12 @@ const ScannerPage = () => {
         text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
       });
 
-      // Reset after success
       setTimeout(() => {
-        setEmploye(null);
-        setScanResult(null);
-        setMessage({ type: '', text: '' });
-        startScanner();
-      }, 3000);
+        handleReset();
+      }, 2000);
 
     } catch (err) {
-      setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement du pointage' });
+      setMessage({ type: 'error', text: 'Erreur lors du pointage' });
     } finally {
       setLoading(false);
     }
@@ -97,11 +155,7 @@ const ScannerPage = () => {
     setScanResult(null);
     setMessage({ type: '', text: '' });
     if (scannerRef.current) {
-        scannerRef.current.clear().then(() => {
-            startScanner();
-        }).catch(() => {
-            startScanner();
-        });
+        scannerRef.current.clear().then(() => startScanner()).catch(() => startScanner());
     } else {
         startScanner();
     }
@@ -114,13 +168,40 @@ const ScannerPage = () => {
           <h1>Scanner QR Code</h1>
           <p className="page-subtitle">Pointeuse Digitale Haute Précision</p>
         </div>
+
+        <div className="mode-toggle" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Mode Auto</span>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={isAutoMode}
+              onChange={(e) => {
+                setIsAutoMode(e.target.checked);
+                if (!e.target.checked && !scannerRef.current) {
+                  // If switching back to manual and scanner was cleared
+                  handleReset();
+                }
+              }}
+            />
+            <span className="slider round"></span>
+          </label>
+        </div>
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
-          <h3>📷 Scanner</h3>
-          <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+        <div className="section-card" style={{ position: 'relative' }}>
+          <h3>📷 {isAutoMode ? 'Scanner Auto' : 'Scanner Manuel'}</h3>
+
+          <div id="reader" style={{ width: '100%', border: 'none', borderRadius: 12, overflow: 'hidden' }}></div>
+
+          {cooldown && (
+            <div className="cooldown-overlay">
+              <div className="spinner"></div>
+              <p>Traitement terminé. Prêt dans 3s...</p>
+            </div>
+          )}
+
+          {!isAutoMode && scanResult && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
@@ -130,11 +211,11 @@ const ScannerPage = () => {
         </div>
 
         <div className="section-card">
-          <h3>👤 Informations Employé</h3>
-          {loading && <div className="spinner"></div>}
+          <h3>👤 Statut Scanner</h3>
+          {loading && !cooldown && <div className="spinner"></div>}
 
           {message.text && (
-            <div className={`message ${message.type === 'error' ? 'error-message' : 'success-message'}`}>
+            <div className={`message ${message.type === 'error' ? 'error-message' : 'success-message'} animate-slide-in`}>
               {message.text}
             </div>
           )}
@@ -156,37 +237,43 @@ const ScannerPage = () => {
                 </div>
               </div>
 
-              <div className="detail-item" style={{ marginBottom: 15 }}>
-                <label>Service</label>
-                <span>{employe.service?.nom_service}</span>
-              </div>
-              <div className="detail-item" style={{ marginBottom: 24 }}>
-                <label>Poste</label>
-                <span>{employe.poste || 'Collaborateur'}</span>
+              <div className="detail-item" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                <label style={{ color: 'var(--text-muted)' }}>Service</label>
+                <span style={{ fontWeight: 600 }}>{employe.service?.nom_service}</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
-                  onClick={() => handlePointage('entree')}
-                  disabled={loading}
-                >
-                  📥 Pointer Entrée
-                </button>
-                <button
-                  className="btn-primary"
-                  style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
-                  onClick={() => handlePointage('sortie')}
-                  disabled={loading}
-                >
-                  📤 Pointer Sortie
-                </button>
-              </div>
+              {!isAutoMode && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15, marginTop: 20 }}>
+                  <button
+                    className="btn-primary"
+                    style={{ background: 'var(--success)', borderColor: 'var(--success)' }}
+                    onClick={() => handleManualPointage('entree')}
+                    disabled={loading}
+                  >
+                    📥 Entrée
+                  </button>
+                  <button
+                    className="btn-primary"
+                    style={{ background: 'var(--warning)', borderColor: 'var(--warning)' }}
+                    onClick={() => handleManualPointage('sortie')}
+                    disabled={loading}
+                  >
+                    📤 Sortie
+                  </button>
+                </div>
+              )}
+
+              {isAutoMode && (
+                <div style={{ textAlign: 'center', padding: '20px', background: 'var(--primary-glow)', borderRadius: 12 }}>
+                   <p style={{ margin: 0, color: 'var(--primary)', fontWeight: 700 }}>Traitement automatique...</p>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>
-              {scanResult ? 'Recherche en cours...' : 'Veuillez scanner un badge QR code'}
+              {isAutoMode
+                ? 'Le scanner traitera automatiquement chaque badge présenté.'
+                : (scanResult ? 'Recherche en cours...' : 'Veuillez scanner un badge QR code')}
             </div>
           )}
         </div>
