@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const PointagesPage = () => {
   const [retards, setRetards] = useState([]);
   const [absences, setAbsences] = useState([]);
-  const [allPointages, setAllPointages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('retards');
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,6 +41,49 @@ const PointagesPage = () => {
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const tableColumn = ["Employé", "Matricule", "Service", "Type", "Détails/Motif"];
+    const tableRows = [];
+
+    // Add Retards
+    retards.forEach(r => {
+      const rowData = [
+        `${r.employe?.prenom} ${r.employe?.nom}`,
+        r.employe?.matricule || '-',
+        r.employe?.service?.nom_service || '-',
+        "RETARD",
+        `Entrée: ${r.heure_entree} (+${r.retard_minutes} min)`
+      ];
+      tableRows.push(rowData);
+    });
+
+    // Add Absences
+    absences.forEach(a => {
+      const rowData = [
+        `${a.employe?.prenom} ${a.employe?.nom}`,
+        a.employe?.matricule || '-',
+        a.employe?.service?.nom_service || '-',
+        "ABSENCE",
+        a.motif_absence || 'Non justifié'
+      ];
+      tableRows.push(rowData);
+    });
+
+    doc.setFontSize(18);
+    doc.text(`Rapport de Pointage - ${today}`, 14, 22);
+
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      theme: 'grid',
+      headStyles: { fillColor: [99, 102, 241] }
+    });
+
+    doc.save(`pointages_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -48,7 +92,10 @@ const PointagesPage = () => {
           <h1>Suivi des Pointages</h1>
           <p className="page-subtitle">📅 {today}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-secondary" onClick={exportPDF}>📄 Export PDF</button>
+          <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}
