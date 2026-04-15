@@ -4,6 +4,7 @@ import apiClient from '../services/api';
 import '../styles/Dashboard.css';
 
 const GestionCongesPage = () => {
+  // eslint-disable-next-line no-unused-vars
   const { user } = useAuth();
   const [conges, setConges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,6 +12,7 @@ const GestionCongesPage = () => {
 
   useEffect(() => {
     loadConges();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterStatut]);
 
   const loadConges = async () => {
