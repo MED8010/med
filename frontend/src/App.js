@@ -14,6 +14,8 @@ import PointagesPage from './pages/PointagesPage';
 import CongesPage from './pages/CongesPage';
 import SalairesPage from './pages/SalairesPage';
 import AuditPage from './pages/AuditPage';
+import ScannerPage from './pages/ScannerPage';
+import RoadmapPage from './pages/RoadmapPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import NotificationsPage from './pages/NotificationsPage';
 import MesCongesPage from './pages/MesCongesPage';
@@ -93,6 +95,18 @@ function App() {
           <Route path="/audit" element={
             <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
               <AppLayout><AuditPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/scanner" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+              <AppLayout><ScannerPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/roadmap" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+              <AppLayout><RoadmapPage /></AppLayout>
             </ProtectedRoute>
           } />
 
