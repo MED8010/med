@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const PointagesPage = () => {
@@ -38,7 +40,55 @@ const PointagesPage = () => {
     `${a.employe?.prenom} ${a.employe?.nom}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const todayStr = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('fr-FR');
+
+    doc.setFontSize(18);
+    doc.text('Rapport des Pointages - ' + dateFormatted, 14, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Retards: ${retards.length} | Absences: ${absences.length}`, 14, 30);
+
+    // Retards Table
+    if (retards.length > 0) {
+      doc.setFontSize(14);
+      doc.text('Retards du jour', 14, 45);
+      const retardsData = retards.map(r => [
+        `${r.employe?.prenom} ${r.employe?.nom}`,
+        r.employe?.matricule || '',
+        r.heure_entree || '',
+        `+${r.retard_minutes} min`
+      ]);
+      doc.autoTable({
+        startY: 50,
+        head: [['Employé', 'Matricule', 'Entrée', 'Retard']],
+        body: retardsData,
+      });
+    }
+
+    // Absences Table
+    const startYAbsences = retards.length > 0 ? doc.lastAutoTable.finalY + 15 : 45;
+    if (absences.length > 0) {
+      doc.setFontSize(14);
+      doc.text('Absences du jour', 14, startYAbsences);
+      const absencesData = absences.map(a => [
+        `${a.employe?.prenom} ${a.employe?.nom}`,
+        a.employe?.matricule || '',
+        a.motif_absence || 'Non spécifié'
+      ]);
+      doc.autoTable({
+        startY: startYAbsences + 5,
+        head: [['Employé', 'Matricule', 'Motif']],
+        body: absencesData,
+      });
+    }
+
+    doc.save(`pointages_${now.toISOString().split('T')[0]}.pdf`);
+  };
 
   return (
     <div className="dashboard-container">
@@ -46,9 +96,12 @@ const PointagesPage = () => {
       <div className="page-header">
         <div className="page-title-group">
           <h1>Suivi des Pointages</h1>
-          <p className="page-subtitle">📅 {today}</p>
+          <p className="page-subtitle">📅 {todayStr}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-secondary" onClick={exportPDF}>📄 Rapport PDF</button>
+          <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}
