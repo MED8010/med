@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/api';
 import '../styles/Dashboard.css';
 
 const StagePage = () => {
-  const { user } = useAuth();
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

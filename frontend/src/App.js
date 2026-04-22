@@ -11,19 +11,19 @@ import AdminDashboard from './pages/AdminDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import EmployesPage from './pages/EmployesPage';
 import PointagesPage from './pages/PointagesPage';
-import CongesPage from './pages/CongesPage';
 import SalairesPage from './pages/SalairesPage';
 import AuditPage from './pages/AuditPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import NotificationsPage from './pages/NotificationsPage';
 import MesCongesPage from './pages/MesCongesPage';
-import GestionCongesPage from './pages/GestionCongesPage';
 import AdminCongesPage from './pages/AdminCongesPage';
 import CongesChefPage from './pages/CongesChefPage';
 import TimeDisciplineDashboard from './pages/TimeDisciplineDashboard';
 import SalaryAnalyticsDashboard from './pages/SalaryAnalyticsDashboard';
 import ProfilePage from './pages/ProfilePage';
 import EmployeDetail from './pages/EmployeDetail';
+import RoadmapPage from './pages/RoadmapPage';
+import StagePage from './pages/StagePage';
 
 import './styles/Dashboard.css';
 
@@ -108,6 +108,12 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/roadmap" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+              <AppLayout><RoadmapPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/gestion-conges" element={
             <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
               <AppLayout><AdminCongesPage /></AppLayout>
@@ -124,6 +130,12 @@ function App() {
           <Route path="/mes-conges" element={
             <ProtectedRoute allowedRoles={['employe']}>
               <AppLayout><MesCongesPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/stages" element={
+            <ProtectedRoute allowedRoles={['employe', 'chef_service', 'admin', 'super_admin']}>
+              <AppLayout><StagePage /></AppLayout>
             </ProtectedRoute>
           } />
 
