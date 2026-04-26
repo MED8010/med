@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../services/api';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import '../styles/Dashboard.css';
 
 const PointagesPage = () => {
@@ -40,6 +42,48 @@ const PointagesPage = () => {
 
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const tableColumn = ["Employé", "Matricule", "Service", "Type", "Détail"];
+    const tableRows = [];
+
+    retards.forEach(r => {
+      tableRows.push([
+        `${r.employe?.prenom} ${r.employe?.nom}`,
+        r.employe?.matricule || '',
+        r.employe?.service?.nom_service || '',
+        "RETARD",
+        `+${r.retard_minutes} min (Entrée: ${r.heure_entree})`
+      ]);
+    });
+
+    absences.forEach(a => {
+      tableRows.push([
+        `${a.employe?.prenom} ${a.employe?.nom}`,
+        a.employe?.matricule || '',
+        a.employe?.service?.nom_service || '',
+        "ABSENCE",
+        a.motif_absence || 'Sans motif'
+      ]);
+    });
+
+    doc.setFontSize(18);
+    doc.text("Rapport Journalier des Pointages", 14, 22);
+    doc.setFontSize(11);
+    doc.text(`Date: ${today}`, 14, 30);
+    doc.text(`Total signalés: ${totalPresents}`, 14, 38);
+
+    doc.autoTable({
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+      theme: 'grid',
+      headStyles: { fillStyle: [99, 102, 241] }
+    });
+
+    doc.save(`pointages_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="dashboard-container">
       {/* Header */}
@@ -48,7 +92,10 @@ const PointagesPage = () => {
           <h1>Suivi des Pointages</h1>
           <p className="page-subtitle">📅 {today}</p>
         </div>
-        <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        <div style={{ display: 'flex', gap: 10 }}>
+           <button className="btn-secondary" onClick={exportPDF}>📥 Export PDF</button>
+           <button className="btn-primary" onClick={loadData}>🔄 Actualiser</button>
+        </div>
       </div>
 
       {/* KPI Summary */}
