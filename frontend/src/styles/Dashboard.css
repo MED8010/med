@@ -1838,3 +1838,169 @@ body.dark-mode .loading-overlay {
     border-radius: var(--radius-lg);
   }
 }
+/* ========== UI TOGGLE SWITCH ========== */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--text-muted);
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background: var(--grad-primary);
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(24px);
+}
+
+/* ========== COOLDOWN OVERLAY ========== */
+.cooldown-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  color: white;
+  animation: fadeIn 0.3s ease;
+}
+
+.cooldown-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+/* ========== ROADMAP TIMELINE ========== */
+.roadmap-timeline {
+  position: relative;
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 20px 0;
+}
+
+.roadmap-timeline::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background: var(--border);
+  top: 0;
+}
+
+.roadmap-item {
+  margin-bottom: 40px;
+  position: relative;
+  width: 50%;
+  padding: 0 40px;
+}
+
+.roadmap-item:nth-child(odd) {
+  left: 0;
+  text-align: right;
+}
+
+.roadmap-item:nth-child(even) {
+  left: 50%;
+  text-align: left;
+}
+
+.roadmap-dot {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: var(--grad-primary);
+  border: 4px solid var(--bg-card);
+  border-radius: 50%;
+  top: 10px;
+  z-index: 2;
+  box-shadow: var(--shadow-sm);
+}
+
+.roadmap-item:nth-child(odd) .roadmap-dot {
+  right: -10px;
+}
+
+.roadmap-item:nth-child(even) .roadmap-dot {
+  left: -10px;
+}
+
+.roadmap-content {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s ease;
+}
+
+.roadmap-content:hover {
+  transform: translateY(-5px);
+  border-color: var(--primary);
+}
+
+.roadmap-date {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 14px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .roadmap-timeline::before {
+    left: 20px;
+  }
+  .roadmap-item {
+    width: 100%;
+    left: 0 !important;
+    padding-left: 50px;
+    padding-right: 0;
+    text-align: left !important;
+  }
+  .roadmap-dot {
+    left: 10px !important;
+  }
+}
