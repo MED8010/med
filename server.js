@@ -17,6 +17,7 @@ const structureRoutes = require('./backend/routes/structureRoutes');
 const auditRoutes = require('./backend/routes/auditRoutes');
 const notificationRoutes = require('./backend/routes/notifications');
 const userRoutes = require('./backend/routes/userRoutes');
+const stagesRoutes = require('./backend/routes/stages');
 
 // Connexion à la BD
 connectDB();
@@ -52,6 +53,7 @@ app.use('/api/structure', structureRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/stages', stagesRoutes);
 
 // Route de test
 app.get('/api/health', (req, res) => {

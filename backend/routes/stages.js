@@ -16,9 +16,9 @@ router.post('/', verifyToken, createStageRequest);
 router.get('/my-requests', verifyToken, getMyStageRequests);
 
 // Routes protégées - Admin/Chef voit toutes les demandes
-router.get('/', verifyToken, getAllStageRequests);
-router.put('/:id/approve', verifyToken, approveStagRequest);
-router.put('/:id/reject', verifyToken, rejectStageRequest);
+router.get('/', verifyToken, checkRole(['admin', 'chef_service', 'super_admin']), getAllStageRequests);
+router.put('/:id/approve', verifyToken, checkRole(['admin', 'chef_service', 'super_admin']), approveStagRequest);
+router.put('/:id/reject', verifyToken, checkRole(['admin', 'chef_service', 'super_admin']), rejectStageRequest);
 
 module.exports = router;
 

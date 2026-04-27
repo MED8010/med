@@ -11,6 +11,7 @@ const NAV_CONFIG = {
         { path: '/super-admin', icon: '🔧', label: 'Gestion Système' },
         { path: '/dashboard', icon: '📊', label: 'Dashboard Admin' },
         { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -25,6 +26,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/employes', icon: '👥', label: 'Employés' },
         { path: '/pointages', icon: '✅', label: 'Pointages' },
+        { path: '/stages', icon: '📚', label: 'Stages' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
       ]
@@ -43,6 +45,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/dashboard', icon: '📊', label: 'Dashboard' },
         { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -57,6 +60,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/employes', icon: '👥', label: 'Employés' },
         { path: '/pointages', icon: '✅', label: 'Pointages' },
+        { path: '/stages', icon: '📚', label: 'Stages' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
       ]
@@ -75,16 +79,25 @@ const NAV_CONFIG = {
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
         { path: '/mes-conges', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Mes Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
   ],
   chef_service: [
     {
-      section: 'Personnel',
+      section: 'Tableaux de Bord',
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
+      ]
+    },
+    {
+      section: 'Personnel',
+      items: [
         { path: '/mes-conges-chef', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Gestion Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
