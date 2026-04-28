@@ -7,8 +7,16 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
   const scannerRef = useRef(null);
+
+  // Using refs to access latest state in stable callbacks
+  const stateRef = useRef({ loading, cooldown, isAutoMode, employe });
+  useEffect(() => {
+    stateRef.current = { loading, cooldown, isAutoMode, employe };
+  }, [loading, cooldown, isAutoMode, employe]);
 
   useEffect(() => {
     startScanner();
@@ -33,9 +41,14 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
-        scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+    if (stateRef.current.loading || stateRef.current.cooldown) return;
+
+    if (!stateRef.current.isAutoMode) {
+      if (scannerRef.current) {
+          scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
     }
+
     setScanResult(result);
     loadEmploye(result);
   };
@@ -50,40 +63,57 @@ const ScannerPage = () => {
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
       setEmploye(res.data);
+
+      if (stateRef.current.isAutoMode) {
+        handlePointage('auto', res.data);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
-      // Restart scanner if not found
-      startScanner();
+      if (!stateRef.current.isAutoMode) {
+        startScanner();
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const handlePointage = async (type, empData) => {
+    const targetEmploye = empData || employe;
+    if (!targetEmploye) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
-        scanner_action: type, // 'entree' or 'sortie'
+        employe_id: targetEmploye._id,
+        scanner_action: type,
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const res = await apiClient.post('/pointages', payload);
+      const actionDone = res.data.effectiveAction || type;
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${actionDone === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${targetEmploye.prenom} ${targetEmploye.nom}`
       });
 
-      // Reset after success
-      setTimeout(() => {
-        setEmploye(null);
-        setScanResult(null);
-        setMessage({ type: '', text: '' });
-        startScanner();
-      }, 3000);
+      if (isAutoMode) {
+        setCooldown(true);
+        setTimeout(() => {
+          setCooldown(false);
+          setScanResult(null);
+          setEmploye(null);
+          setMessage({ type: '', text: '' });
+        }, 3000);
+      } else {
+        setTimeout(() => {
+          setEmploye(null);
+          setScanResult(null);
+          setMessage({ type: '', text: '' });
+          startScanner();
+        }, 3000);
+      }
 
     } catch (err) {
       setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement du pointage' });
@@ -130,8 +160,35 @@ const ScannerPage = () => {
         </div>
 
         <div className="section-card">
-          <h3>👤 Informations Employé</h3>
-          {loading && <div className="spinner"></div>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h3 style={{ margin: 0 }}>👤 Informations Employé</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Mode Auto</span>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={isAutoMode}
+                  onChange={(e) => {
+                    setIsAutoMode(e.target.checked);
+                    handleReset();
+                  }}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+          </div>
+
+          {loading && !isAutoMode && <div className="spinner"></div>}
+          {cooldown && (
+            <div style={{
+              position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.8)',
+              zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexDirection: 'column', borderRadius: 'var(--radius-lg)'
+            }}>
+              <div className="spinner"></div>
+              <p style={{ marginTop: 10, fontWeight: 700, color: 'var(--primary)' }}>Traitement terminé. Prêt dans 3s...</p>
+            </div>
+          )}
 
           {message.text && (
             <div className={`message ${message.type === 'error' ? 'error-message' : 'success-message'}`}>
