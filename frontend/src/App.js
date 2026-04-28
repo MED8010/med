@@ -14,6 +14,9 @@ import PointagesPage from './pages/PointagesPage';
 import CongesPage from './pages/CongesPage';
 import SalairesPage from './pages/SalairesPage';
 import AuditPage from './pages/AuditPage';
+import ScannerPage from './pages/ScannerPage';
+import RoadmapPage from './pages/RoadmapPage';
+import StagePage from './pages/StagePage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import NotificationsPage from './pages/NotificationsPage';
 import MesCongesPage from './pages/MesCongesPage';
@@ -96,6 +99,18 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/scanner" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><ScannerPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/roadmap" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><RoadmapPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/time-discipline" element={
             <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
               <AppLayout><TimeDisciplineDashboard /></AppLayout>
@@ -130,6 +145,12 @@ function App() {
           <Route path="/mes-conges-chef" element={
             <ProtectedRoute allowedRoles={['chef_service']}>
               <AppLayout><CongesChefPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/stages" element={
+            <ProtectedRoute allowedRoles={['employe', 'chef_service', 'admin', 'super_admin']}>
+              <AppLayout><StagePage /></AppLayout>
             </ProtectedRoute>
           } />
 
