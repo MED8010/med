@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, register }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, register, setUser, setToken }}>
       {children}
     </AuthContext.Provider>
   );
@@ -81,3 +81,17 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// FOR TESTING ONLY: Mock auth state
+if (process.env.REACT_APP_MOCK_AUTH === 'true') {
+  window.mockAuth = (role) => {
+    const mockUser = {
+      role: role || 'admin',
+      email: 'admin@rh.app',
+      employe: { prenom: 'Admin', nom: 'System', matricule: 'ADM001' }
+    };
+    localStorage.setItem('token', 'mock-token');
+    // We would need to trigger a re-render or state update here
+    console.log('Mock auth set for role:', role);
+  };
+}
