@@ -24,13 +24,11 @@ const TimeDisciplineDashboard = () => {
 
   useEffect(() => {
     loadMetrics();
-  }, [dateRange]);
+  }, [dateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMetrics = async () => {
     try {
       setLoading(true);
-      const startDate = dateRange.start.toISOString().split('T')[0];
-      const endDate = dateRange.end.toISOString().split('T')[0];
 
       const response = await apiClient.get('/pointages/stats/time-discipline', {
         params: {

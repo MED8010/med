@@ -20,7 +20,7 @@ const SuperAdminDashboard = () => {
   useEffect(() => {
     fetchUsers();
     fetchEmployes();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchUsers = async () => {
     try {
