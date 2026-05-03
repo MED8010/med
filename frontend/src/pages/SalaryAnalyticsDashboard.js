@@ -35,7 +35,7 @@ const SalaryAnalyticsDashboard = () => {
 
   useEffect(() => {
     loadMetrics();
-  }, [period]);
+  }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMetrics = async () => {
     try {
