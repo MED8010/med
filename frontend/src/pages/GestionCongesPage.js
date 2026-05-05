@@ -4,7 +4,7 @@ import apiClient from '../services/api';
 import '../styles/Dashboard.css';
 
 const GestionCongesPage = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const [conges, setConges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('demande');

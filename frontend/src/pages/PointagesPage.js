@@ -5,7 +5,7 @@ import '../styles/Dashboard.css';
 const PointagesPage = () => {
   const [retards, setRetards] = useState([]);
   const [absences, setAbsences] = useState([]);
-  const [allPointages, setAllPointages] = useState([]);
+  // const [allPointages, setAllPointages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('retards');
   const [searchTerm, setSearchTerm] = useState('');
