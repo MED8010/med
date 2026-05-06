@@ -11,6 +11,7 @@ const NAV_CONFIG = {
         { path: '/super-admin', icon: '🔧', label: 'Gestion Système' },
         { path: '/dashboard', icon: '📊', label: 'Dashboard Admin' },
         { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -43,6 +44,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/dashboard', icon: '📊', label: 'Dashboard' },
         { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -59,6 +61,7 @@ const NAV_CONFIG = {
         { path: '/pointages', icon: '✅', label: 'Pointages' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
+        { path: '/stages', icon: '📚', label: 'Stages' },
       ]
     },
     {
@@ -75,16 +78,25 @@ const NAV_CONFIG = {
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
         { path: '/mes-conges', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Mes Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
   ],
   chef_service: [
     {
+      section: 'Tableaux de Bord',
+      items: [
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
+      ]
+    },
+    {
       section: 'Personnel',
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
         { path: '/mes-conges-chef', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Mes Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
