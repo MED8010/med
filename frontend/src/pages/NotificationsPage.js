@@ -57,6 +57,15 @@ const NotificationsPage = () => {
     } catch (error) { }
   };
 
+  const handleDeleteAllRead = async () => {
+    if (window.confirm('Voulez-vous vraiment supprimer toutes les notifications lues ?')) {
+      try {
+        await apiClient.delete('/notifications/delete-all/read');
+        setNotifications(prev => prev.filter(n => !n.lu));
+      } catch (error) { }
+    }
+  };
+
   if (loading) return <div className="loading"><div className="spinner"></div>Chargement des notifications...</div>;
 
   const displayed = filterUnread ? notifications.filter(n => !n.lu) : notifications;
@@ -84,6 +93,15 @@ const NotificationsPage = () => {
           {unreadCount > 0 && (
             <button className="btn-primary" onClick={handleMarkAllAsRead}>
               ✓ Tout marquer comme lu
+            </button>
+          )}
+          {notifications.length > unreadCount && (
+            <button
+              className="btn-delete"
+              onClick={handleDeleteAllRead}
+              style={{ padding: '10px 15px', display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              🗑️ Supprimer les lues
             </button>
           )}
         </div>
