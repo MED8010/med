@@ -24,6 +24,8 @@ import TimeDisciplineDashboard from './pages/TimeDisciplineDashboard';
 import SalaryAnalyticsDashboard from './pages/SalaryAnalyticsDashboard';
 import ProfilePage from './pages/ProfilePage';
 import EmployeDetail from './pages/EmployeDetail';
+import RoadmapPage from './pages/RoadmapPage';
+import ScannerPage from './pages/ScannerPage';
 
 import './styles/Dashboard.css';
 
@@ -75,6 +77,18 @@ function App() {
           <Route path="/pointages" element={
             <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
               <AppLayout><PointagesPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/scanner" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><ScannerPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/roadmap" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><RoadmapPage /></AppLayout>
             </ProtectedRoute>
           } />
 
