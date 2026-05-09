@@ -5,7 +5,7 @@ const {
   createStageRequest,
   getMyStageRequests,
   getAllStageRequests,
-  approveStagRequest,
+  approveStageRequest,
   rejectStageRequest
 } = require('../controllers/stageController');
 
@@ -17,7 +17,7 @@ router.get('/my-requests', verifyToken, getMyStageRequests);
 
 // Routes protégées - Admin/Chef voit toutes les demandes
 router.get('/', verifyToken, getAllStageRequests);
-router.put('/:id/approve', verifyToken, approveStagRequest);
+router.put('/:id/approve', verifyToken, approveStageRequest);
 router.put('/:id/reject', verifyToken, rejectStageRequest);
 
 module.exports = router;

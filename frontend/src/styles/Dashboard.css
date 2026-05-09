@@ -1838,3 +1838,79 @@ body.dark-mode .loading-overlay {
     border-radius: var(--radius-lg);
   }
 }
+
+/* ========== SCANNER SPECIFIC ========== */
+.scanner-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--border);
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.cooldown-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  border-radius: inherit;
+  color: white;
+  font-weight: 700;
+  animation: fadeIn 0.2s ease;
+}
+
+.scan-feedback-success {
+  border: 4px solid var(--success) !important;
+}
+
+.scan-feedback-error {
+  border: 4px solid var(--danger) !important;
+}
