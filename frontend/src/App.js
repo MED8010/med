@@ -24,6 +24,10 @@ import TimeDisciplineDashboard from './pages/TimeDisciplineDashboard';
 import SalaryAnalyticsDashboard from './pages/SalaryAnalyticsDashboard';
 import ProfilePage from './pages/ProfilePage';
 import EmployeDetail from './pages/EmployeDetail';
+import ScannerPage from './pages/ScannerPage';
+import RoadmapPage from './pages/RoadmapPage';
+import ChefServiceDashboard from './pages/ChefServiceDashboard';
+import StagePage from './pages/StagePage';
 
 import './styles/Dashboard.css';
 
@@ -78,6 +82,24 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/scanner" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><ScannerPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/roadmap" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><RoadmapPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/stages" element={
+            <ProtectedRoute allowedRoles={['employe', 'chef_service', 'admin', 'super_admin']}>
+              <AppLayout><StagePage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
           <Route path="/conges" element={
             <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
               <AppLayout><AdminCongesPage /></AppLayout>
@@ -116,8 +138,14 @@ function App() {
 
           {/* Employee / Chef routes */}
           <Route path="/employee-dashboard" element={
-            <ProtectedRoute allowedRoles={['employe', 'chef_service']}>
+            <ProtectedRoute allowedRoles={['employe']}>
               <AppLayout><EmployeeDashboard /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/chef-dashboard" element={
+            <ProtectedRoute allowedRoles={['chef_service']}>
+              <AppLayout><ChefServiceDashboard /></AppLayout>
             </ProtectedRoute>
           } />
 
