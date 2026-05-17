@@ -5,12 +5,9 @@ import '../styles/Dashboard.css';
 const PointagesPage = () => {
   const [retards, setRetards] = useState([]);
   const [absences, setAbsences] = useState([]);
-  const [allPointages, setAllPointages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('retards');
   const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
@@ -26,6 +23,11 @@ const PointagesPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) return <div className="loading"><div className="spinner"></div>Chargement des pointages...</div>;
 
