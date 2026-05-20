@@ -75,16 +75,25 @@ const NAV_CONFIG = {
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
         { path: '/mes-conges', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Mes Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
   ],
   chef_service: [
     {
-      section: 'Personnel',
+      section: 'Tableaux de Bord',
       items: [
         { path: '/employee-dashboard', icon: '📊', label: 'Mon Dashboard' },
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🗺️', label: 'Roadmap Futur' },
+      ]
+    },
+    {
+      section: 'Personnel',
+      items: [
         { path: '/mes-conges-chef', icon: '🏖️', label: 'Mes Congés' },
+        { path: '/stages', icon: '📚', label: 'Mes Stages' },
         { path: '/notifications', icon: '🔔', label: 'Notifications', hasNotif: true },
       ]
     },
