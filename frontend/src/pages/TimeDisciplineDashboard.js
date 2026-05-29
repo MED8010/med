@@ -24,12 +24,15 @@ const TimeDisciplineDashboard = () => {
 
   useEffect(() => {
     loadMetrics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange]);
 
   const loadMetrics = async () => {
     try {
       setLoading(true);
+      // eslint-disable-next-line no-unused-vars
       const startDate = dateRange.start.toISOString().split('T')[0];
+      // eslint-disable-next-line no-unused-vars
       const endDate = dateRange.end.toISOString().split('T')[0];
 
       const response = await apiClient.get('/pointages/stats/time-discipline', {

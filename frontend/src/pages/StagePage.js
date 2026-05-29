@@ -4,6 +4,7 @@ import apiClient from '../services/api';
 import '../styles/Dashboard.css';
 
 const StagePage = () => {
+  // eslint-disable-next-line no-unused-vars
   const { user } = useAuth();
   const [stages, setStages] = useState([]);
   const [loading, setLoading] = useState(true);
