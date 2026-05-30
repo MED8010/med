@@ -50,6 +50,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const loadStructures = async () => {
