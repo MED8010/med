@@ -26,7 +26,10 @@ const StagePage = () => {
 
   const loadStages = async () => {
     try {
-      const response = await apiClient.get('/stages/my-requests');
+      const endpoint = (user.role === 'admin' || user.role === 'super_admin' || user.role === 'chef_service')
+        ? '/stages'
+        : '/stages/my-requests';
+      const response = await apiClient.get(endpoint);
       setStages(response.data);
     } catch (error) {
       console.error('Erreur chargement stages:', error);
@@ -42,6 +45,23 @@ const StagePage = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleAction = async (id, action) => {
+    try {
+      if (action === 'approve') {
+        await apiClient.put(`/stages/${id}/approve`);
+      } else {
+        const motif = prompt('Motif du refus :');
+        if (motif === null) return;
+        await apiClient.put(`/stages/${id}/reject`, { motif_refus: motif });
+      }
+      loadStages();
+      setSuccessMessage(`Demande ${action === 'approve' ? 'approuvée' : 'refusée'} avec succès`);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      setError('Erreur lors de l\'action');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -229,30 +249,32 @@ const StagePage = () => {
       )}
 
       <div className="table-container">
-        <h2>Mes Demandes de Stage ({stages.length})</h2>
+        <h2>{ (user.role === 'admin' || user.role === 'super_admin' || user.role === 'chef_service') ? 'Toutes les Demandes' : 'Mes Demandes'} ({stages.length})</h2>
         {stages.length === 0 ? (
           <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
-            Aucune demande de stage créée
+            Aucune demande de stage trouvée
           </p>
         ) : (
           <table style={{ width: '100%' }}>
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Titre</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Entreprise</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Domaine</th>
+                <th style={{ padding: '12px', textAlign: 'left' }}>Employé</th>
+                <th style={{ padding: '12px', textAlign: 'left' }}>Titre / Entreprise</th>
                 <th style={{ padding: '12px', textAlign: 'left' }}>Dates</th>
                 <th style={{ padding: '12px', textAlign: 'center' }}>Statut</th>
+                {(user.role === 'admin' || user.role === 'super_admin' || user.role === 'chef_service') && <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {stages.map(stage => (
                 <tr key={stage._id} style={{ borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '12px' }}>
-                    <strong>{stage.titre}</strong>
+                    {stage.employe ? `${stage.employe.prenom} ${stage.employe.nom}` : 'N/A'}
                   </td>
-                  <td style={{ padding: '12px' }}>{stage.entreprise}</td>
-                  <td style={{ padding: '12px' }}>{stage.domaine}</td>
+                  <td style={{ padding: '12px' }}>
+                    <strong>{stage.titre}</strong>
+                    <div style={{ fontSize: '12px', color: '#666' }}>{stage.entreprise} ({stage.domaine})</div>
+                  </td>
                   <td style={{ padding: '12px', fontSize: '13px' }}>
                     {new Date(stage.date_debut).toLocaleDateString('fr-FR')} → {new Date(stage.date_fin).toLocaleDateString('fr-FR')}
                   </td>
@@ -260,7 +282,7 @@ const StagePage = () => {
                     <span style={{
                       padding: '5px 10px',
                       borderRadius: '20px',
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: 'bold',
                       background: stage.statut === 'approuve' ? '#d4edda' : stage.statut === 'refuse' ? '#f8d7da' : '#fff3cd',
                       color: stage.statut === 'approuve' ? '#155724' : stage.statut === 'refuse' ? '#721c24' : '#856404'
@@ -268,6 +290,26 @@ const StagePage = () => {
                       {stage.statut.charAt(0).toUpperCase() + stage.statut.slice(1)}
                     </span>
                   </td>
+                  {(user.role === 'admin' || user.role === 'super_admin' || user.role === 'chef_service') && (
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                      {stage.statut === 'en_attente' && (
+                        <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
+                          <button
+                            onClick={() => handleAction(stage._id, 'approve')}
+                            style={{ padding: '4px 8px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                          >
+                            Approuver
+                          </button>
+                          <button
+                            onClick={() => handleAction(stage._id, 'reject')}
+                            style={{ padding: '4px 8px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                          >
+                            Refuser
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

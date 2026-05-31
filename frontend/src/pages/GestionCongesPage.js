@@ -4,13 +4,13 @@ import apiClient from '../services/api';
 import '../styles/Dashboard.css';
 
 const GestionCongesPage = () => {
-  const { user } = useAuth();
   const [conges, setConges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState('demande');
 
   useEffect(() => {
     loadConges();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterStatut]);
 
   const loadConges = async () => {

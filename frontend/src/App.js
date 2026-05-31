@@ -11,13 +11,14 @@ import AdminDashboard from './pages/AdminDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import EmployesPage from './pages/EmployesPage';
 import PointagesPage from './pages/PointagesPage';
-import CongesPage from './pages/CongesPage';
 import SalairesPage from './pages/SalairesPage';
 import AuditPage from './pages/AuditPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import NotificationsPage from './pages/NotificationsPage';
+import RoadmapPage from './pages/RoadmapPage';
+import StagePage from './pages/StagePage';
+import ScannerPage from './pages/ScannerPage';
 import MesCongesPage from './pages/MesCongesPage';
-import GestionCongesPage from './pages/GestionCongesPage';
 import AdminCongesPage from './pages/AdminCongesPage';
 import CongesChefPage from './pages/CongesChefPage';
 import TimeDisciplineDashboard from './pages/TimeDisciplineDashboard';
@@ -75,6 +76,24 @@ function App() {
           <Route path="/pointages" element={
             <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
               <AppLayout><PointagesPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/scanner" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><ScannerPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/roadmap" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><RoadmapPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/stages" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service', 'employe']}>
+              <AppLayout><StagePage /></AppLayout>
             </ProtectedRoute>
           } />
 
