@@ -68,7 +68,7 @@ const getAllStageRequests = async (req, res) => {
 };
 
 // Approuver une demande de stage
-const approveStagRequest = async (req, res) => {
+const approveStageRequest = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -143,6 +143,6 @@ module.exports = {
   createStageRequest,
   getMyStageRequests,
   getAllStageRequests,
-  approveStagRequest,
+  approveStageRequest,
   rejectStageRequest
 };
