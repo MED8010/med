@@ -12,10 +12,10 @@ const router = express.Router();
 
 // Routes protégées
 router.get('/', verifyToken, getMyNotifications);
-router.put('/:id/read', verifyToken, markAsRead);
 router.put('/mark-all/read', verifyToken, markAllAsRead);
-router.delete('/:id', verifyToken, deleteNotification);
+router.put('/:id/read', verifyToken, markAsRead);
 router.delete('/delete-all/read', verifyToken, deleteAllReadNotifications);
+router.delete('/:id', verifyToken, deleteNotification);
 
 module.exports = router;
 
