@@ -9,31 +9,39 @@ const createPointage = async (req, res) => {
 
     const today = new Date();
     const serverTime = today.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false });
-    const serverDate = today.toISOString().split('T')[0];
+    // Use local date to avoid timezone shift from toISOString
+    const serverDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
     // If scanner_action is provided, use server time and ignore client time
     const finalDate = scanner_action ? serverDate : date;
-    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
-    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
 
     let pointage = await Pointage.findOne({
       employe: employe_id,
       date: new Date(finalDate)
     });
 
+    let effectiveAction = scanner_action;
+    if (scanner_action === 'auto') {
+      if (!pointage || !pointage.heure_entree) {
+        effectiveAction = 'entree';
+      } else {
+        effectiveAction = 'sortie';
+      }
+    }
+
     if (!pointage) {
       pointage = new Pointage({
         employe: employe_id,
         date: new Date(finalDate),
-        heure_entree: finalHeureEntree,
-        heure_sortie: finalHeureSortie,
+        heure_entree: (effectiveAction === 'entree') ? serverTime : heure_entree,
+        heure_sortie: (effectiveAction === 'sortie') ? serverTime : heure_sortie,
         absence,
         motif_absence
       });
     } else {
-      if (scanner_action === 'sortie') {
+      if (effectiveAction === 'sortie') {
         pointage.heure_sortie = serverTime;
-      } else if (scanner_action === 'entree') {
+      } else if (effectiveAction === 'entree') {
         pointage.heure_entree = serverTime;
       } else {
         pointage.heure_sortie = heure_sortie || pointage.heure_sortie;
@@ -66,7 +74,14 @@ const createPointage = async (req, res) => {
     await pointage.save();
     await pointage.populate('employe');
 
-    res.status(201).json({ message: 'Pointage enregistré avec succès', pointage });
+    // Add effectiveAction to response for frontend display
+    const responseData = pointage.toObject();
+    responseData.effectiveAction = effectiveAction;
+
+    res.status(201).json({
+      message: `Pointage d'${effectiveAction === 'entree' ? 'entrée' : 'sortie'} enregistré`,
+      pointage: responseData
+    });
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de l\'enregistrement du pointage', error: error.message });
   }
