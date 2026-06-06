@@ -1838,3 +1838,106 @@ body.dark-mode .loading-overlay {
     border-radius: var(--radius-lg);
   }
 }
+
+/* ========== SCANNER AUTO MODE TOGGLE ========== */
+.scanner-controls {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-hover);
+  padding: 8px 16px;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggle-container:hover {
+  border-color: var(--primary);
+  background: var(--primary-glow);
+}
+
+.toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 22px;
+  background: var(--text-muted);
+  border-radius: 11px;
+  transition: background 0.3s ease;
+}
+
+.toggle-container.active .toggle-switch {
+  background: var(--success);
+}
+
+.toggle-handle {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-container.active .toggle-handle {
+  transform: translateX(22px);
+}
+
+.toggle-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+/* ========== SCANNER COOLDOWN OVERLAY ========== */
+.scanner-wrapper {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 2px solid var(--border);
+  transition: border-color 0.3s ease;
+}
+
+.scanner-wrapper.cooldown {
+  border-color: var(--warning);
+}
+
+.cooldown-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 14, 26, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+
+.cooldown-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255,255,255,0.1);
+  border-top-color: var(--warning);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+.cooldown-text {
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  text-align: center;
+}
