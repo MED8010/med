@@ -13,15 +13,21 @@ const createPointage = async (req, res) => {
 
     // If scanner_action is provided, use server time and ignore client time
     const finalDate = scanner_action ? serverDate : date;
-    const finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
-    const finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
+    let finalHeureEntree = (scanner_action === 'entree') ? serverTime : heure_entree;
+    let finalHeureSortie = (scanner_action === 'sortie') ? serverTime : heure_sortie;
 
     let pointage = await Pointage.findOne({
       employe: employe_id,
       date: new Date(finalDate)
     });
 
+    let effectiveAction = scanner_action;
+
     if (!pointage) {
+      if (scanner_action === 'auto') {
+        finalHeureEntree = serverTime;
+        effectiveAction = 'entree';
+      }
       pointage = new Pointage({
         employe: employe_id,
         date: new Date(finalDate),
@@ -31,7 +37,15 @@ const createPointage = async (req, res) => {
         motif_absence
       });
     } else {
-      if (scanner_action === 'sortie') {
+      if (scanner_action === 'auto') {
+        if (!pointage.heure_entree) {
+          pointage.heure_entree = serverTime;
+          effectiveAction = 'entree';
+        } else {
+          pointage.heure_sortie = serverTime;
+          effectiveAction = 'sortie';
+        }
+      } else if (scanner_action === 'sortie') {
         pointage.heure_sortie = serverTime;
       } else if (scanner_action === 'entree') {
         pointage.heure_entree = serverTime;
@@ -66,7 +80,11 @@ const createPointage = async (req, res) => {
     await pointage.save();
     await pointage.populate('employe');
 
-    res.status(201).json({ message: 'Pointage enregistré avec succès', pointage });
+    // Add effectiveAction to the response for the frontend to know what happened in 'auto' mode
+    const responseData = pointage.toObject();
+    responseData.effectiveAction = effectiveAction;
+
+    res.status(201).json({ message: 'Pointage enregistré avec succès', pointage: responseData });
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de l\'enregistrement du pointage', error: error.message });
   }

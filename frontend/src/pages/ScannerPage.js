@@ -7,11 +7,28 @@ const ScannerPage = () => {
   const [scanResult, setScanResult] = useState(null);
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(() => {
+    const saved = localStorage.getItem('scanner_auto_mode');
+    return saved === 'true';
+  });
   const [message, setMessage] = useState({ type: '', text: '' });
+
   const scannerRef = useRef(null);
+  const cooldownRef = useRef(false);
+  const stateRef = useRef({ loading, cooldown, isAutoMode, employe });
+
+  // Update stateRef whenever states change
+  useEffect(() => {
+    stateRef.current = { loading, cooldown, isAutoMode, employe };
+  }, [loading, cooldown, isAutoMode, employe]);
 
   useEffect(() => {
     startScanner();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (scannerRef.current) {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
@@ -25,7 +42,7 @@ const ScannerPage = () => {
         width: 250,
         height: 250,
       },
-      fps: 5,
+      fps: 10,
     });
 
     scanner.render(onScanSuccess, onScanError);
@@ -33,9 +50,16 @@ const ScannerPage = () => {
   };
 
   const onScanSuccess = (result) => {
-    if (scannerRef.current) {
+    const { loading, cooldown, isAutoMode } = stateRef.current;
+
+    if (loading || cooldown) return;
+
+    if (!isAutoMode) {
+      if (scannerRef.current) {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
     }
+
     setScanResult(result);
     loadEmploye(result);
   };
@@ -45,57 +69,97 @@ const ScannerPage = () => {
   };
 
   const loadEmploye = async (matricule) => {
+    const { isAutoMode } = stateRef.current;
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const empData = res.data;
+      setEmploye(empData);
+
+      if (isAutoMode) {
+        handlePointage('auto', empData);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
-      // Restart scanner if not found
-      startScanner();
+      if (!isAutoMode) {
+        startScanner();
+      } else {
+        // Cooldown for error too in auto mode
+        triggerCooldown();
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const triggerCooldown = () => {
+    setCooldown(true);
+    cooldownRef.current = true;
+    setTimeout(() => {
+      setCooldown(false);
+      cooldownRef.current = false;
+      setMessage({ type: '', text: '' });
+      setEmploye(null);
+      setScanResult(null);
+    }, 3000);
+  };
+
+  const handlePointage = async (type, targetEmploye = null) => {
+    const emp = targetEmploye || employe;
+    if (!emp) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
-        scanner_action: type, // 'entree' or 'sortie'
+        employe_id: emp._id,
+        scanner_action: type,
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const res = await apiClient.post('/pointages', payload);
+      const actionLabel = res.data.pointage.effectiveAction === 'entree' ? 'entrée' : 'sortie';
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${actionLabel} enregistré pour ${emp.prenom} ${emp.nom}`
       });
 
-      // Reset after success
-      setTimeout(() => {
-        setEmploye(null);
-        setScanResult(null);
-        setMessage({ type: '', text: '' });
-        startScanner();
-      }, 3000);
+      if (isAutoMode || type === 'auto') {
+        triggerCooldown();
+      } else {
+        // Manual mode reset
+        setTimeout(() => {
+          setEmploye(null);
+          setScanResult(null);
+          setMessage({ type: '', text: '' });
+          startScanner();
+        }, 3000);
+      }
 
     } catch (err) {
       setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement du pointage' });
+      if (isAutoMode) triggerCooldown();
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleAutoMode = () => {
+    const next = !isAutoMode;
+    setIsAutoMode(next);
+    localStorage.setItem('scanner_auto_mode', next.toString());
+    handleReset();
   };
 
   const handleReset = () => {
     setEmploye(null);
     setScanResult(null);
     setMessage({ type: '', text: '' });
+    setCooldown(false);
+    cooldownRef.current = false;
+
     if (scannerRef.current) {
         scannerRef.current.clear().then(() => {
             startScanner();
@@ -114,13 +178,39 @@ const ScannerPage = () => {
           <h1>Scanner QR Code</h1>
           <p className="page-subtitle">Pointeuse Digitale Haute Précision</p>
         </div>
+        <div className="header-actions">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-card)', padding: '8px 16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <span style={{ fontSize: '14px', fontWeight: '600' }}>Mode Automatique</span>
+            <label className="switch">
+              <input type="checkbox" checked={isAutoMode} onChange={toggleAutoMode} />
+              <span className="slider round"></span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div className="grid-2">
-        <div className="section-card">
-          <h3>📷 Scanner</h3>
-          <div id="reader" style={{ width: '100%' }}></div>
-          {scanResult && (
+        <div className="section-card" style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+            <h3 style={{ margin: 0 }}>📷 Scanner</h3>
+            {isAutoMode && <span className="badge badge-success">Auto ON</span>}
+          </div>
+
+          <div id="reader" style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }}></div>
+
+          {cooldown && (
+            <div className="cooldown-overlay" style={{
+              position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)',
+              zIndex: 10, borderRadius: '16px', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', color: 'white',
+              backdropFilter: 'blur(4px)'
+            }}>
+              <div className="spinner" style={{ marginBottom: 15 }}></div>
+              <p style={{ fontWeight: 'bold' }}>Traitement... Prêt dans 3s</p>
+            </div>
+          )}
+
+          {scanResult && !isAutoMode && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
               <button className="btn-secondary" onClick={handleReset}>
                 🔄 Relancer le scanner
@@ -131,11 +221,11 @@ const ScannerPage = () => {
 
         <div className="section-card">
           <h3>👤 Informations Employé</h3>
-          {loading && <div className="spinner"></div>}
+          {loading && !cooldown && <div className="spinner"></div>}
 
           {message.text && (
-            <div className={`message ${message.type === 'error' ? 'error-message' : 'success-message'}`}>
-              {message.text}
+            <div className={`message ${message.type === 'error' ? 'error-message' : 'success-message'}`} style={{ marginBottom: 20 }}>
+              {message.type === 'success' ? '✅' : '⚠️'} {message.text}
             </div>
           )}
 
