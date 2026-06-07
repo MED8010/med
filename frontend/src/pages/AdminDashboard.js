@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../services/api';
-import { Pie, Bar } from 'react-chartjs-2';
+import { Pie } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -46,10 +46,12 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     loadStructures();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const loadStructures = async () => {
