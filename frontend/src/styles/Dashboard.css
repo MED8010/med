@@ -1660,6 +1660,109 @@ button.btn-secondary:hover {
   animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Toggle Switch */
+.switch-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.switch-container input {
+  display: none;
+}
+
+.switch-slider {
+  width: 44px;
+  height: 22px;
+  background: var(--border);
+  border-radius: 20px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.switch-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.switch-container input:checked + .switch-slider {
+  background: var(--primary);
+}
+
+.switch-container input:checked + .switch-slider::before {
+  transform: translateX(22px);
+}
+
+.switch-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Cooldown Overlay */
+.cooldown-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  animation: fadeIn 0.3s ease;
+}
+
+.cooldown-content {
+  text-align: center;
+  color: white;
+}
+
+.cooldown-content .spinner {
+  margin: 0 auto 15px;
+  border-top-color: var(--primary-light);
+}
+
+.cooldown-content p {
+  font-weight: 700;
+  margin-bottom: 5px;
+  letter-spacing: 0.5px;
+}
+
+.cooldown-content small {
+  opacity: 0.7;
+  font-size: 11px;
+}
+
+/* Auto mode badge */
+.auto-mode-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--primary-glow);
+  color: var(--primary);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px dashed var(--primary);
+  margin-top: 20px;
+}
+
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
