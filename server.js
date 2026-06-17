@@ -16,6 +16,7 @@ const salaireRoutes = require('./backend/routes/salaireRoutes');
 const structureRoutes = require('./backend/routes/structureRoutes');
 const auditRoutes = require('./backend/routes/auditRoutes');
 const notificationRoutes = require('./backend/routes/notifications');
+const stageRoutes = require('./backend/routes/stages');
 const userRoutes = require('./backend/routes/userRoutes');
 
 // Connexion à la BD
@@ -51,6 +52,7 @@ app.use('/api/salaires', salaireRoutes);
 app.use('/api/structure', structureRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/stages', stageRoutes);
 app.use('/api/users', userRoutes);
 
 // Route de test
