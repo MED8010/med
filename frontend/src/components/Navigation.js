@@ -11,6 +11,7 @@ const NAV_CONFIG = {
         { path: '/super-admin', icon: '🔧', label: 'Gestion Système' },
         { path: '/dashboard', icon: '📊', label: 'Dashboard Admin' },
         { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -26,6 +27,7 @@ const NAV_CONFIG = {
         { path: '/employes', icon: '👥', label: 'Employés' },
         { path: '/pointages', icon: '✅', label: 'Pointages' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
+        { path: '/gestion-stages', icon: '🎓', label: 'Stages' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
       ]
     },
@@ -43,6 +45,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/dashboard', icon: '📊', label: 'Dashboard' },
         { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -58,6 +61,7 @@ const NAV_CONFIG = {
         { path: '/employes', icon: '👥', label: 'Employés' },
         { path: '/pointages', icon: '✅', label: 'Pointages' },
         { path: '/conges', icon: '🏖️', label: 'Congés' },
+        { path: '/gestion-stages', icon: '🎓', label: 'Stages' },
         { path: '/salaires', icon: '💳', label: 'Salaires' },
       ]
     },
@@ -80,6 +84,19 @@ const NAV_CONFIG = {
     },
   ],
   chef_service: [
+    {
+      section: 'Tableaux de Bord',
+      items: [
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
+      ]
+    },
+    {
+      section: 'Gestion',
+      items: [
+        { path: '/gestion-stages', icon: '🎓', label: 'Gestion Stages' },
+      ]
+    },
     {
       section: 'Personnel',
       items: [
