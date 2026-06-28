@@ -24,6 +24,10 @@ import TimeDisciplineDashboard from './pages/TimeDisciplineDashboard';
 import SalaryAnalyticsDashboard from './pages/SalaryAnalyticsDashboard';
 import ProfilePage from './pages/ProfilePage';
 import EmployeDetail from './pages/EmployeDetail';
+import ScannerPage from './pages/ScannerPage';
+import RoadmapPage from './pages/RoadmapPage';
+import StagePage from './pages/StagePage';
+import AdminStagesPage from './pages/AdminStagesPage';
 
 import './styles/Dashboard.css';
 
@@ -114,6 +118,24 @@ function App() {
             </ProtectedRoute>
           } />
 
+          <Route path="/scanner" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><ScannerPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/roadmap" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><RoadmapPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/gestion-stages" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'chef_service']}>
+              <AppLayout><AdminStagesPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
           {/* Employee / Chef routes */}
           <Route path="/employee-dashboard" element={
             <ProtectedRoute allowedRoles={['employe', 'chef_service']}>
@@ -130,6 +152,12 @@ function App() {
           <Route path="/mes-conges-chef" element={
             <ProtectedRoute allowedRoles={['chef_service']}>
               <AppLayout><CongesChefPage /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/stages" element={
+            <ProtectedRoute allowedRoles={['employe', 'chef_service']}>
+              <AppLayout><StagePage /></AppLayout>
             </ProtectedRoute>
           } />
 
