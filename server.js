@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
+const mongoSanitizeCustom = require('./backend/middleware/mongoSanitizeCustom');
 const connectDB = require('./backend/config/database');
 const auditMiddleware = require('./backend/middleware/audit');
 
@@ -16,6 +16,7 @@ const salaireRoutes = require('./backend/routes/salaireRoutes');
 const structureRoutes = require('./backend/routes/structureRoutes');
 const auditRoutes = require('./backend/routes/auditRoutes');
 const notificationRoutes = require('./backend/routes/notifications');
+const stageRoutes = require('./backend/routes/stages');
 const userRoutes = require('./backend/routes/userRoutes');
 
 // Connexion à la BD
@@ -39,7 +40,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use(express.json());
-app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(mongoSanitizeCustom); // Prevent NoSQL injection
 app.use(auditMiddleware);
 
 // Routes
@@ -51,6 +52,7 @@ app.use('/api/salaires', salaireRoutes);
 app.use('/api/structure', structureRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/stages', stageRoutes);
 app.use('/api/users', userRoutes);
 
 // Route de test
