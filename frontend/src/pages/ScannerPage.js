@@ -8,6 +8,9 @@ const ScannerPage = () => {
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [isAutoMode, setIsAutoMode] = useState(() => {
+    return localStorage.getItem('scanner_auto_mode') === 'true';
+  });
   const scannerRef = useRef(null);
 
   useEffect(() => {
@@ -17,7 +20,14 @@ const ScannerPage = () => {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const toggleAutoMode = () => {
+    const newVal = !isAutoMode;
+    setIsAutoMode(newVal);
+    localStorage.setItem('scanner_auto_mode', newVal);
+  };
 
   const startScanner = () => {
     const scanner = new Html5QrcodeScanner('reader', {
@@ -49,7 +59,13 @@ const ScannerPage = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const employeData = res.data;
+      setEmploye(employeData);
+
+      // If auto mode is on, trigger pointage automatically
+      if (isAutoMode) {
+        handlePointage('auto', employeData);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
@@ -60,21 +76,24 @@ const ScannerPage = () => {
     }
   };
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const handlePointage = async (type, targetEmploye) => {
+    const activeEmploye = targetEmploye || employe;
+    if (!activeEmploye) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
-        scanner_action: type, // 'entree' or 'sortie'
+        employe_id: activeEmploye._id,
+        scanner_action: type, // 'entree', 'sortie' or 'auto'
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const response = await apiClient.post('/pointages', payload);
+      const actionTaken = response.data.effectiveAction || type;
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${actionTaken === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${activeEmploye.prenom} ${activeEmploye.nom}`
       });
 
       // Reset after success
@@ -87,6 +106,10 @@ const ScannerPage = () => {
 
     } catch (err) {
       setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement du pointage' });
+      // Reset after error to allow new scan
+      setTimeout(() => {
+        handleReset();
+      }, 3000);
     } finally {
       setLoading(false);
     }
@@ -118,7 +141,21 @@ const ScannerPage = () => {
 
       <div className="grid-2">
         <div className="section-card">
-          <h3>📷 Scanner</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+            <h3 style={{ margin: 0 }}>📷 Scanner</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: isAutoMode ? 'var(--success)' : 'var(--text-muted)' }}>
+                {isAutoMode ? 'Mode Auto: ON' : 'Mode Auto: OFF'}
+              </span>
+              <button
+                onClick={toggleAutoMode}
+                className={isAutoMode ? 'btn-primary' : 'btn-secondary'}
+                style={{ padding: '4px 12px', fontSize: '11px' }}
+              >
+                {isAutoMode ? 'Désactiver' : 'Activer'}
+              </button>
+            </div>
+          </div>
           <div id="reader" style={{ width: '100%' }}></div>
           {scanResult && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
