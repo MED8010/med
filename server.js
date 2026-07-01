@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
+const mongoSanitize = require('./backend/middleware/mongoSanitizeCustom');
 const connectDB = require('./backend/config/database');
 const auditMiddleware = require('./backend/middleware/audit');
 
@@ -39,7 +39,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use(express.json());
-app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(mongoSanitize); // Prevent NoSQL injection
 app.use(auditMiddleware);
 
 // Routes

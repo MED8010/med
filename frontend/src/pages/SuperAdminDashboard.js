@@ -20,6 +20,7 @@ const SuperAdminDashboard = () => {
   useEffect(() => {
     fetchUsers();
     fetchEmployes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchUsers = async () => {
