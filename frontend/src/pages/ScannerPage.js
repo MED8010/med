@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import apiClient from '../services/api';
 import '../styles/Dashboard.css';
@@ -8,7 +8,22 @@ const ScannerPage = () => {
   const [employe, setEmploye] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [isAutoMode, setIsAutoMode] = useState(() => {
+    return localStorage.getItem('scanner_auto_mode') === 'true';
+  });
   const scannerRef = useRef(null);
+  const cooldownRef = useRef(false);
+  const isAutoModeRef = useRef(isAutoMode);
+  const loadingRef = useRef(loading);
+
+  useEffect(() => {
+    isAutoModeRef.current = isAutoMode;
+    localStorage.setItem('scanner_auto_mode', isAutoMode);
+  }, [isAutoMode]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
 
   useEffect(() => {
     startScanner();
@@ -28,53 +43,87 @@ const ScannerPage = () => {
       fps: 5,
     });
 
-    scanner.render(onScanSuccess, onScanError);
+    scanner.render((result) => onScanSuccessRef.current(result), onScanError);
     scannerRef.current = scanner;
   };
 
-  const onScanSuccess = (result) => {
+  const onScanSuccess = useCallback((result) => {
+    if (cooldownRef.current || loadingRef.current) return;
+
+    // Activer le cooldown de 5 secondes
+    cooldownRef.current = true;
+    setTimeout(() => {
+      cooldownRef.current = false;
+    }, 5000);
+
     if (scannerRef.current) {
         scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
     }
+
     setScanResult(result);
-    loadEmploye(result);
-  };
+    loadEmployeRef.current(result);
+  }, []);
+
+  const onScanSuccessRef = useRef(onScanSuccess);
+  useEffect(() => {
+    onScanSuccessRef.current = onScanSuccess;
+  }, [onScanSuccess]);
 
   const onScanError = (err) => {
     // console.warn(err);
   };
 
-  const loadEmploye = async (matricule) => {
+  const loadEmploye = useCallback(async (matricule) => {
     setLoading(true);
     setMessage({ type: '', text: '' });
     try {
       const res = await apiClient.get(`/employes/matricule/${matricule}`);
-      setEmploye(res.data);
+      const empData = res.data;
+      setEmploye(empData);
+
+      if (isAutoModeRef.current) {
+        handlePointage('auto', empData);
+      }
     } catch (err) {
       setMessage({ type: 'error', text: 'Employé non trouvé ou erreur serveur' });
       setScanResult(null);
-      // Restart scanner if not found
-      startScanner();
+      // Restart scanner if not found if not in auto mode
+      if (!isAutoModeRef.current) {
+        startScanner();
+      } else {
+        setTimeout(() => {
+          setMessage({ type: '', text: '' });
+          startScanner();
+        }, 3000);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handlePointage = async (type) => {
-    if (!employe) return;
+  const loadEmployeRef = useRef(loadEmploye);
+  useEffect(() => {
+    loadEmployeRef.current = loadEmploye;
+  }, [loadEmploye]);
+
+  const handlePointage = async (type, targetEmploye = null) => {
+    const emp = targetEmploye || employe;
+    if (!emp) return;
 
     setLoading(true);
     try {
       const payload = {
-        employe_id: employe._id,
-        scanner_action: type, // 'entree' or 'sortie'
+        employe_id: emp._id,
+        scanner_action: type, // 'entree', 'sortie' or 'auto'
         absence: false
       };
 
-      await apiClient.post('/pointages', payload);
+      const res = await apiClient.post('/pointages', payload);
+      const effectiveAction = res.data.pointage.effectiveAction || type;
+
       setMessage({
         type: 'success',
-        text: `Pointage d'${type === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${employe.prenom} ${employe.nom}`
+        text: `Pointage d'${effectiveAction === 'entree' ? 'entrée' : 'sortie'} enregistré pour ${emp.prenom} ${emp.nom}`
       });
 
       // Reset after success
@@ -82,11 +131,17 @@ const ScannerPage = () => {
         setEmploye(null);
         setScanResult(null);
         setMessage({ type: '', text: '' });
+        // In both modes, we want to be ready for the next scan.
+        // For Html5QrcodeScanner, we need to re-render it if it was cleared.
         startScanner();
       }, 3000);
 
     } catch (err) {
       setMessage({ type: 'error', text: 'Erreur lors de l\'enregistrement du pointage' });
+      setTimeout(() => {
+        setMessage({ type: '', text: '' });
+        startScanner();
+      }, 3000);
     } finally {
       setLoading(false);
     }
@@ -97,9 +152,7 @@ const ScannerPage = () => {
     setScanResult(null);
     setMessage({ type: '', text: '' });
     if (scannerRef.current) {
-        scannerRef.current.clear().then(() => {
-            startScanner();
-        }).catch(() => {
+        scannerRef.current.clear().catch(() => {}).finally(() => {
             startScanner();
         });
     } else {
@@ -118,7 +171,22 @@ const ScannerPage = () => {
 
       <div className="grid-2">
         <div className="section-card">
-          <h3>📷 Scanner</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h3 style={{ margin: 0 }}>📷 Scanner</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: isAutoMode ? 'var(--success)' : 'var(--text-muted)' }}>
+                {isAutoMode ? 'MODE AUTO ON' : 'MODE MANUEL'}
+              </span>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={isAutoMode}
+                  onChange={(e) => setIsAutoMode(e.target.checked)}
+                />
+                <span className="slider round"></span>
+              </label>
+            </div>
+          </div>
           <div id="reader" style={{ width: '100%' }}></div>
           {scanResult && (
             <div style={{ marginTop: 20, textAlign: 'center' }}>
