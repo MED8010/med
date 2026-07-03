@@ -11,6 +11,7 @@ const NAV_CONFIG = {
         { path: '/super-admin', icon: '🔧', label: 'Gestion Système' },
         { path: '/dashboard', icon: '📊', label: 'Dashboard Admin' },
         { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -43,6 +44,7 @@ const NAV_CONFIG = {
       items: [
         { path: '/dashboard', icon: '📊', label: 'Dashboard' },
         { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
       ]
     },
     {
@@ -80,6 +82,13 @@ const NAV_CONFIG = {
     },
   ],
   chef_service: [
+    {
+      section: 'Tableaux de Bord',
+      items: [
+        { path: '/scanner', icon: '📷', label: 'Scanner QR' },
+        { path: '/roadmap', icon: '🚀', label: 'Roadmap Futur' },
+      ]
+    },
     {
       section: 'Personnel',
       items: [
