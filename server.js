@@ -3,7 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
+const mongoSanitize = require('./backend/middleware/mongoSanitizeCustom');
 const connectDB = require('./backend/config/database');
 const auditMiddleware = require('./backend/middleware/audit');
 
@@ -17,6 +17,7 @@ const structureRoutes = require('./backend/routes/structureRoutes');
 const auditRoutes = require('./backend/routes/auditRoutes');
 const notificationRoutes = require('./backend/routes/notifications');
 const userRoutes = require('./backend/routes/userRoutes');
+const stageRoutes = require('./backend/routes/stages');
 
 // Connexion à la BD
 connectDB();
@@ -52,6 +53,7 @@ app.use('/api/structure', structureRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/stages', stageRoutes);
 
 // Route de test
 app.get('/api/health', (req, res) => {
